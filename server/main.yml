@@ -1,0 +1,123 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts: "{{ inv }}"
+  gather_facts: False
+  become_method: sudo
+  become: yes
+  tasks:
+  # Ubuntu 16.04+ will not install python 2 in default
+  - name: Ensure Python 2
+    raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+    changed_when: False
+
+- hosts: "{{ inv }}"
+#    - uat-cdn-us-01
+#  - all_g1_cdn
+#    - cdn-g1-hk-01
+#    - cdn-g1-hk-04
+#    - cdn-g1-sg-01
+  #strategy: free
+  become_method: sudo
+  become: yes
+  #vars:
+  # deploy_file_path: "{{ deployment_path }}"
+  pre_tasks:
+    - name: Ubuntu >=16 is required
+      fail: msg='Ubuntu >=16 is required'
+      when: not (ansible_distribution == 'Ubuntu' and ansible_lsb.major_release|int >= 16)
+
+    - name: Network | Build CDN IP list
+      set_fact:
+        cdn_ips: "{{ cdn_ips | default([]) + [lookup('dig', '%s/A' % (hostvars[item].inventory_hostname_short))] }}"
+      with_items:
+        - "{{ groups['all_cdn'] | default([]) }}"
+        - "{{ groups['all_tb_cdn'] | default([]) }}"
+      delegate_to: localhost
+      run_once: True
+      tags: always
+
+    - include: facts.yml
+
+  roles:
+    - { role: locales,        tags: [sys, cdn, locales] }
+    - { role: ntp,            tags: [sys, cdn, ntp] }
+    - { role: dns,            tags: [cdn, dns] }
+    - { role: apt,            tags: [sys, cdn, apt] }
+    - { role: hostname,       tags: [sys, cdn, hostname] }
+    - { role: syspkg,         tags: [sys, cdn, syspkg] }
+    - { role: grub,           tags: [sys, cdn, grub] }
+    - { role: sshd,           tags: [sys, cdn, sshd] }
+    - { role: unload_drivers, tags: [sys, cdn] }
+    - { role: rc.local,       tags: [sys, cdn, rc] }
+    - { role: pamd,           tags: [sys, cdn] }
+    - { role: services,       tags: [sys, cdn] }
+    - { role: iptables,       tags: [cdn, firewall] }
+    - { role: tuned_cpu,      tags: [sys, cdn, tuning] }
+    - { role: tuned_network,  tags: [sys, cdn, tuning] }
+    - { role: bash,           tags: [sys, cdn] }
+    - { role: softflowd,      tags: [cdn, softflowd] }
+    - { role: memcached,      tags: [cdn, memcached] }
+    - { role: nginx,          tags: [cdn, nginx] }
+    - { role: heartbeat,      tags: [cdn, heartbeat] }
+
+  tasks:
+    - name: speedtest
+      get_url:
+        url: https://raw.githubusercontent.com/sivel/speedtest-cli/master/speedtest.py
+        dest: ~/speedtest.py
+      tags: [cdn]
+
+
+  #
+  # tasks:
+  #   - name: Insert new pam.d rules after pam_unix.so
+  #     pamd:
+  #       name: common-session
+  #       path: /etc/pam.d/
+  #       type: session
+  #       control: required
+  #       module_path: pam_unix.so
+  #       new_type: "{{ item.type }}"
+  #       new_control: "{{ item.control }}"
+  #       new_module_path: "{{ item.module }}"
+  #       state: after
+  #     with_items:
+  #       - { type: session, control: required, module: pam_limits.so }
+  #       #- { type: session, control: optional, module: pam_systemd.so }
+  #
+  # - name: copy etc
+  #   copy: src={{ deploy_file_path }}/files/etc dest=/ owner=root group=root
+  #   tags:
+  #    - copy_etc
+  #
+  # - name: copy nginx
+  #   synchronize: src={{ deploy_file_path }}/files/local/nginx dest=/usr/local recursive=yes copy_links=yes delete=yes
+  #   tags:
+  #    - copy_nginx
+  #
+  # - name: copy script
+  #   copy: src={{ deploy_file_path }}/files/local/script dest=/usr/local owner=root group=root directory_mode=755 mode=755
+  #   tags:
+  #    - copy_script
+  #
+  # - name: unzip nginx extra module
+  #   unarchive: src={{ deploy_file_path }}/files/nginx_extra_module.tar.gz dest=/usr/local copy=yes
+  #   tags:
+  #    - uzip_nginx_extra_module
+  #
+  # - name: unzip memcached
+  #   unarchive: src={{ deploy_file_path }}/files/memcached.tar.gz dest=/usr/local copy=yes
+  #   tags:
+  #    - uzip_memcached
+  #
+  # - name: copy nginx.conf template
+  #   template: src={{ deploy_file_path }}/files/templates/nginx.conf.j2 dest=/usr/local/nginx/conf/nginx.conf owner=root group=root mode=0644
+  #   tags:
+  #    - copy_nginx_template
+  #
+  # - name: copy start memcache template
+  #   template: src={{ deploy_file_path }}/files/templates/start_memcached.sh.j2 dest=/usr/local/script/start_memcached.sh owner=root group=root mode=0755
+  #   tags:
+  #    - copy_start_memcache_template
+
+...

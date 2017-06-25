@@ -1,0 +1,46 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#!/bin/bash -e
+#{{ ansible_managed }}
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+sleep 2
+_HOSTNAME={{ inventory_hostname_short }}
+echo $_HOSTNAME > /etc/hostname
+/bin/hostname $_HOSTNAME
+sysctl -w kernel.hostname=$_HOSTNAME
+
+{% for sc in rc_scripts | sum(start=[]) | difference(['']) %}
+{{ sc }}
+{% endfor %}
+
+# BEGIN ANSIBLE MANAGED BLOCK - hostname
+# END ANSIBLE MANAGED BLOCK - hostname
+
+# BEGIN ANSIBLE MANAGED BLOCK - ntpdate
+# END ANSIBLE MANAGED BLOCK - ntpdate
+
+# BEGIN ANSIBLE MANAGED BLOCK - iptables
+# END ANSIBLE MANAGED BLOCK - iptables
+
+# BEGIN ANSIBLE MANAGED BLOCK - softflowd
+# END ANSIBLE MANAGED BLOCK - softflowd
+
+# BEGIN ANSIBLE MANAGED BLOCK - nginx
+# END ANSIBLE MANAGED BLOCK - nginx
+
+# BEGIN ANSIBLE MANAGED BLOCK - HeartBeat
+# END ANSIBLE MANAGED BLOCK - HeartBeat
+
+touch /fastboot
+
+exit 0

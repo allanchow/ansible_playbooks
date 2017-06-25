@@ -1,0 +1,8 @@
+*.retry
+*.pid
+*.bak*
+*.log
+*.pyc
+files/*
+!files/nginx
+*.json

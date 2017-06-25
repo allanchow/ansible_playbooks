@@ -1,0 +1,77 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+output {
+  # stdout {
+  #   codec => json
+  # }
+  if [type] == "error_log" {
+    {% if error.outputs is defined and error.outputs.elasticsearch is defined %}
+    elasticsearch {
+      id => "es_{{ error.templatename }}"
+      # IMPORTANT: exclude dedicated master nodes to prevent LS from sending bulk requests
+      hosts => [{{ error.outputs.elasticsearch.host | map('wrap') | join (",") }}]
+      index => ["{{ error.templatename }}-%{+YYYY.MM.dd}"]
+      codec => "plain"
+      action => "index"
+      doc_as_upsert => false
+      # must less than batch_size (default 500)
+#      flush_size => 500
+#      idle_flush_time => 10
+      pool_max => 2000
+      pool_max_per_route => 150
+      resurrect_delay => 5
+      timeout => 60
+      retry_initial_interval => 2
+      retry_max_interval => 60
+      retry_on_conflict => 1
+      template_name => "{{ error.templatename }}"
+      template => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ error.templatename }}.json"
+      template_overwrite => true
+      manage_template => true
+    }
+    {% endif %}
+  } else {
+    {% if access.outputs is defined %}
+    if [type] == "access_log_es" {
+      {% if access.outputs.elasticsearch is defined %}
+      elasticsearch {
+        id => "es_{{ access.templatename }}"
+        # IMPORTANT: exclude dedicated master nodes to prevent LS from sending bulk requests
+        hosts => [{{ access.outputs.elasticsearch.host | map('wrap') | join (",") }}]
+        index => "{{ access.templatename }}-%{+YYYY.MM.dd}"
+        codec => "json"
+        action => "index"
+        #document_id => "%{[req][id]}%{[request_at_ms]}"
+        doc_as_upsert => false
+        # must less than batch_size (default 500)
+#        flush_size => 500
+#        idle_flush_time => 10
+        pool_max => 2000
+        pool_max_per_route => 150
+        resurrect_delay => 5
+        timeout => 60
+        retry_initial_interval => 2
+        retry_max_interval => 60
+        retry_on_conflict => 1
+        template_name => "{{ access.templatename }}"
+        template => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ access.templatename }}.json"
+        template_overwrite => true
+        manage_template => true
+      }
+      {% endif %}
+    }
+    else {
+      {% if access.outputs.mongodb is defined %}
+      mongodb {
+        collection => "{{ access.templatename }}"
+        database => "{{ access.outputs.mongodb.database }}"
+        uri => "mongodb://{{ access.outputs.mongodb.host }}"
+        codec => "json"
+  #      generateId => true
+      }
+      {% endif %}
+    }
+    {% endif %}
+  }
+}

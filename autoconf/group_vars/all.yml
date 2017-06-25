@@ -1,0 +1,31 @@
+---
+#generate_all: "{{ force | default(False) }}"
+cname_domain:
+  - allbrightnetwork.com
+  - allcdn888.com
+cname_regex: ^(?P<prefix>(?:uat-)?cdn-)(?P<id>\d+)\.(?:{{ cname_domain | join('|') }})$
+cdn_hostname_domain_blacklist:
+  - allbrightnetwork.com
+  - allcdn888.com
+
+root:                    "{{ playbook_dir }}/files"
+ngx_conf_root:           "{{ nginx.conf_root }}"
+
+cert_pem_name: xnrovx89e
+key_pem_name:  xnfjr921g
+conf_res_tar:  conf_res.tar
+conf_cert_tar: conf_cert.tar
+s_active:      active
+s_updating:    updating
+s_pending:     pending
+s_deleting:    deleting
+error_codes:
+  E1001: {E1001: {code: 1001, type: WARN,  msg: "null CNAME"}}
+  E1002: {E1002: {code: 1002, type: WARN,  msg: "duplicate CNAME"}}
+  E1003: {E1003: {code: 1003, type: WARN,  msg: "cdn_hostname is blacklisted"}}
+  E1004: {E1004: {code: 1004, type: WARN,  msg: "invalid attributes - origin ip, port, weight"}}
+#  E1005: {E1005: {code: 1005, type: ERROR, msg: "deployment targets are not found in ansible inventory"}}
+#  E1006: {E1006: {code: 1006, type: ERROR, msg: "missing nginx binary in staging config test"}}
+  E1007: {E1007: {code: 1007, type: ERROR,  msg: "staging config test fails"}}
+  E3001: {E3001: {code: 3001, type: ERROR, msg: "xns api call fails"}}
+  E3002: {E3002: {code: 3002, type: WARN,  msg: "dns record(s) already exists, skip dns update"}}

@@ -1,0 +1,63 @@
+---
+- name: Ensure /etc/apt/apt.conf.d/
+  file: path=/etc/apt/apt.conf.d/ state=directory mode=0755
+
+- name: Set additional apt config
+  copy:
+    src="apt.conf.d/{{ item }}"
+    dest=/etc/apt/apt.conf.d/
+    mode=0644
+    force=yes
+  with_items:
+    - 00aptitude
+    - 01norecommend
+    - 02compress-indexes
+
+- name: Set additional dpkg config
+  copy:
+    src="dpkg.cfg.d/{{ item }}"
+    dest=/etc/dpkg/dpkg.cfg.d/
+    mode=0644
+  with_items:
+    - 01_notranslation
+
+- name: Remove dpkg uneeded locale lang
+  shell: find /usr/share/locale -mindepth 1 -maxdepth 1 ! -name 'en' ! -name 'de*' !  -name 'es*' ! -name 'ja*' ! -name 'fr*' ! -name 'zh*' | xargs rm -r
+  ignore_errors: yes
+
+- name: Localize sources.list
+  template:
+    src: "{{ item }}"
+    dest: "/etc/apt/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - sources.list.j2
+
+- name: Install apt components
+  apt:
+    name: "{{ item }}"
+    state: present
+    install_recommends: no
+  with_items:
+    - apt
+    - aptitude
+    - apt-transport-https
+    - apt-utils
+
+- name: Disable apt-daily and prevent dpkg lock
+  systemd:
+    name: "{{ item.name }}"
+    state: stopped
+    masked: "{{ item.masked }}"
+    enabled: no
+  with_items:
+    - { name: "apt-daily.service", masked: "yes"}
+    - { name: "apt-daily.timer", masked: "no"}
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600

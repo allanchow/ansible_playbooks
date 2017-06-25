@@ -1,0 +1,66 @@
+---
+- name: Install grub components
+  apt:
+    name: "{{ item }}"
+    state: "{{ container | ternary('absent', 'present') }}"
+    install_recommends: no
+  with_items:
+    - grub2-common
+  when: grub_enabled
+
+- name: Check existance of /etc/default/grub
+  stat: path=/etc/default/grub
+  register: grub_file
+
+- name: Delete grub.ucf-dist
+  file:
+    path: /etc/default/grub.ucf-dist
+    state: absent
+  when: grub_enabled
+
+- name: Divert original /etc/default/grub
+  command: dpkg-divert --quiet --local --divert /etc/default/grub.dpkg-divert --rename /etc/default/grub
+  args:
+    creates: '/etc/default/grub.dpkg-divert'
+  when: grub_enabled and grub_file.stat.exists
+
+- name: Get default kernel parameters
+  shell: test -f /etc/default/grub.dpkg-divert && . /etc/default/grub.dpkg-divert || exit 0 ; echo $GRUB_CMDLINE_LINUX_DEFAULT | tr " " "\n"
+  register: grub_register_default_cmdline
+  changed_when: False
+  when: not ansible_check_mode and grub_enabled and grub_file.stat.exists
+
+- name: Get old kernel parameters
+  shell: test -f /etc/default/grub.dpkg-divert && . /etc/default/grub.dpkg-divert || exit 0 ; echo $GRUB_CMDLINE_LINUX | tr " " "\n"
+  register: grub_register_old_cmdline
+  changed_when: False
+  when: not ansible_check_mode and grub_enabled and grub_file.stat.exists
+
+- name: Default kernel parameters
+  set_fact:
+    grub_fact_default_kernel_parameters: '{{ grub_register_default_cmdline.stdout_lines }}'
+    grub_fact_old_kernel_parameters:     '{{ grub_register_old_cmdline.stdout_lines }}'
+  when: grub_enabled
+
+- name: Configure /etc/default/grub
+  template:
+    src: grub.j2
+    dest: /etc/default/grub
+    owner: root
+    group: root
+    mode:  0644
+    force: yes
+  notify: [ 'Update GRUB' ]
+  when: grub_enabled
+
+
+
+
+#
+# - name: HugePage Support
+#   mount:
+#     path: /mnt/huge
+#     src: none
+#     fstype: hugetlbfs
+#     opts: pagesize={{ hugepage_pagesize_1G }}
+#     state: present

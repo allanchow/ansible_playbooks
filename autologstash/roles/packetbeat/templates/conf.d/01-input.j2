@@ -1,0 +1,11 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+input {
+  {% for input in packetbeat.inputs.beats  | default([]) %}
+  beats {
+    host => "{{ input.host }}"
+    port => {{ input.port }}
+  }
+  {% endfor %}
+}

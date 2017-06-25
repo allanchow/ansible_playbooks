@@ -1,0 +1,12 @@
+---
+packetbeat:
+  templatename: packetbeat
+  inputs:
+    beats:
+      - host: 192.168.151.102
+        port: 20517
+  outputs:
+    - elasticsearch:
+        id: log
+        host:
+          - 192.168.151.101:9200

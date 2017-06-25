@@ -1,0 +1,5 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#!/bin/bash
+#{{ ansible_managed }}
+
+{{ softflowd.path }}/sbin/softflowd -i {{ iface }} -v 5 -s 1 -n {{ softflowd.ip }}:{{ softflowd.port }} -T full -d &

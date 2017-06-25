@@ -1,0 +1,176 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#!/bin/bash
+#{{ ansible_managed }}
+
+# 2017-Apr, by Gnought
+#   applied to Nginx
+
+shopt -s expand_aliases
+alias fn.begin='exec 3>&1 >/dev/tty'
+alias fn.end='exec >&3-'
+
+trap "exit 1" TERM
+MAIN_PID=$$
+NGXROOT={{ nginx_root }}
+NGX_BIN=nginx
+NGX_EXTRA_ARGS="-p ."
+SUDO=''
+if (( $EUID != 0 )); then
+    SUDO='sudo'
+fi
+KILL="$SUDO /bin/kill"
+
+print_usage() {
+  echo "Usage: $0 COMMAND [args]"
+  echo ""
+  echo "COMMAND"
+  echo "configtest, pid, start, stop, restart, reload, replace_with, help"
+  echo ""
+  exit 0
+}
+run() {
+  if [[ $SUDO == '' ]]; then
+    ${@}
+  else
+    $SUDO ${@}
+  fi
+}
+abort() {
+  echo "$1 Abort ..."
+  kill -s TERM $MAIN_PID
+}
+ngx_ver() {
+  fn.begin
+  local ngx="$1"
+  if [ ! -e $ngx -a ! -x $ngx ]; then
+    abort "$ngx: command not found"
+  fi
+  local ver=$($ngx -v 2>&1 | cut -d'/' -f2 | cut -d ' ' -f1 | sed 's,\.,,g')
+  fn.end
+  echo ${ver}
+}
+ngx_check() {
+  $SUDO "${1:-$NGXROOT/$NGX_BIN}" $NGX_EXTRA_ARGS -t
+  if [ $? -ne 0 ]; then
+    abort "Error in Nginx conf."
+  fi
+}
+ngx_is_running() {
+  local pidfile=$NGXROOT/logs/nginx.pid
+  if [ -e $pidfile -a -f $pidfile -a -s $pidfile ]; then
+    [ $(ps --no-headers -o pid --pid=$(cat $pidfile) | wc -w) -gt 0 ] && echo 1 || echo 0
+  else
+    echo 0
+  fi
+}
+ngx_pid() {
+  fn.begin
+  if [ $(ngx_is_running) -eq 0 ]; then
+    abort "Nginx is not running"
+  fi
+  local pid=$(< $NGXROOT/logs/nginx.pid)
+  fn.end
+  echo ${pid}
+}
+ensure_memcached(){
+  #/usr/local/memcached/bin/memcached -u devopsadmin -l {{ memcached.tcp.cluster_ip }} -p {{ memcached.tcp.cluster_port }} -m 8000M  -t 4 -d -c 102400 -I 100m -C -b 4096 -r
+  local backlog_queue_limit=4096
+  local max_slab_page={{ memcached.max_slab_page }}
+  local max_concurrent_connections=102400
+  local threads=4
+  local max_mem=$(echo $(awk '/MemTotal/ {print $2}' /proc/meminfo)/1024*.8 | bc)
+  max_mem=${max_mem%%.*}M
+
+#  [[ $(ps -C memcached -f --no-headers | grep {{ memcached.unix.socket }} | wc -l) -le 0 ]] && sudo -u "{{ memcached.user }}" -s /bin/sh << EOF
+  [[ $(ps -C memcached -f --no-headers | grep {{ memcached.unix.socket }} | wc -l) -le 0 ]] && sudo -s /bin/sh << EOF
+  exec {{ memcached.path }}/bin/memcached -d -c ${max_concurrent_connections} -m ${max_mem} -u {{ memcached.user }} -t ${threads} -I ${max_slab_page} -C -b ${backlog_queue_limit} -r -o modern -a 775 -s {{ memcached.unix.socket }}
+EOF
+}
+main() {
+  local CMD=${1:-help}; shift;
+  CMD=${CMD,,}
+  case ${CMD} in
+    configtest)
+      ngx_check
+    ;;
+    pid)
+      echo $(ngx_pid)
+    ;;
+    status)
+      local pid=$(ngx_pid)
+      echo "Nginx [$pid] is running"
+    ;;
+    start)
+      ensure_memcached
+      if [ $(ngx_is_running) -eq 1 ]; then
+        abort "Nginx is already running"
+      fi
+      ngx_check
+      echo "Start Nginx"
+      if [[ $(sysctl -n net.core.rmem_max) -lt {{ nginx.udp_buffer_size }} ]]; then
+        run sysctl -w net.core.rmem_max={{ nginx.udp_buffer_size }}
+      fi
+      export LANG=en_HK.utf-8 LANGUAGE=en_HK:en LC_ALL=en_HK.utf-8 && $SUDO $NGXROOT/$NGX_BIN $NGX_EXTRA_ARGS
+    ;;
+    stop)
+      local pid=$(ngx_pid)
+      $KILL -s QUIT $pid
+      echo "Stop Nginx gracefully"
+    ;;
+    restart)
+      read -p "This will generate a downtime. Are you sure [Y/n]? " -n 1 -r response
+      echo    # (optional) move to a new line
+      if [[ ! $response =~ ^[Yy]$ ]]; then abort; fi
+      if [ $(ngx_is_running) -eq 1 ]; then
+        local pid=$(ngx_pid)
+        ngx_check
+        $0 stop
+        while [ $(ps --no-headers -o pid --pid=$pid | wc -w) -gt 0 ]; do
+          echo "[$(date)]: Wait for Nginx to quit ..."
+          sleep 1
+        done
+        sleep 1
+      fi
+      $0 start
+    ;;
+    reload)
+      local pid=$(ngx_pid)
+      ngx_check
+      echo "Reload Nginx Conf with new worker processes"
+      $KILL -s HUP $pid
+    ;;
+    replace_with)
+      local new_exec="$1"
+      #local new_exec_ver=$(ngx_ver $new_exec)
+      #local curr_exec_ver=$(ngx_ver $NGXROOT/$NGX_BIN)
+      #if [[ $new_exec_ver < $curr_exec_ver ]]; then
+      #  abort "Current nginx version $curr_exec_ver is newer than $new_exec_ver."
+      #fi
+      echo "Validate config using new executable: $new_exec"
+      ngx_check $new_exec
+      if [ $(ngx_is_running) -eq 0 ]; then
+        cp -pva $new_exec $NGXROOT/$NGX_BIN 2>&1 >/dev/null
+      else
+        local pid=$(ngx_pid)
+        # Nginx is locked and mv can only do the replacement
+        cp -pva $new_exec $NGXROOT/$NGX_BIN.new 2>&1 >/dev/null
+        mv $NGXROOT/$NGX_BIN.new $NGXROOT/$NGX_BIN
+        echo "Start a new master process"
+        $KILL -s USR2 $pid
+        echo "gracefully shutdown all old worker processes"
+        $KILL -s WINCH $pid
+        while [ $(ps --no-headers -o cmd,pid --ppid=$pid | grep -v master | wc -w) -gt 0 ]; do
+          echo "[$(date)]: Wait for all older worker processes to exit ..."
+          sleep 1
+        done
+        echo "gracefully shutdown the old master process"
+        $KILL -s QUIT $pid
+      fi
+    ;;
+    help|*)
+      print_usage
+    ;;
+  esac
+}
+
+main $*

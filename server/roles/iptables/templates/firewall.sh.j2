@@ -1,0 +1,232 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#!/bin/sh
+#{{ ansible_managed }}
+
+{% set notrack = ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT --notrack', '-j NOTRACK') %}
+{% set track = ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT', '-j ACCEPT') %}
+
+LOGOPT="-m limit --limit 15/minute --log-uid --log-level 7"
+IPT=/sbin/iptables
+IPT6=/sbin/ip6tables
+IF={{ iface }}
+
+kernel() {
+  for i in /proc/sys/net/ipv4/neigh/*/gc_thresh1; do echo 512 > $i; done
+  for i in /proc/sys/net/ipv4/neigh/*/gc_thresh2; do echo 1024 > $i; done
+  for i in /proc/sys/net/ipv4/neigh/*/gc_thresh3; do echo 2048 > $i; done
+  echo 0 > /proc/sys/net/ipv4/ip_forward
+  echo 0 >/proc/sys/net/ipv4/icmp_echo_ignore_all
+  ## ignore bogus icmp errors (default)
+  echo 1 > /proc/sys/net/ipv4/icmp_ignore_bogus_error_responses
+  ## ignore echo broadcast requests to prevent being part of smurf attacks (default)
+  echo 1 > /proc/sys/net/ipv4/icmp_echo_ignore_broadcasts
+  echo 1 > /proc/sys/net/ipv4/tcp_syncookies
+  echo 1 > /proc/sys/net/ipv4/tcp_rfc1337
+  echo 0 > /proc/sys/net/ipv4/tcp_timestamps
+  for i in /proc/sys/net/ipv4/conf/*/arp_ignore; do echo 1 > $i; done
+  for i in /proc/sys/net/ipv4/conf/*/log_martians; do echo 1 > $i; done
+  for i in /proc/sys/net/ipv4/conf/*/rp_filter; do echo 1 > $i; done
+  ## ICMP routing redirects (only secure)
+  for i in /proc/sys/net/ipv4/conf/*/accept_redirects; do echo 0 > $i; done
+  ## send redirects (not a router, disable it)
+  for i in /proc/sys/net/ipv4/conf/*/send_redirects; do echo 0 > $i; done
+  for i in /proc/sys/net/ipv4/conf/*/accept_source_route; do echo 0 > $i; done
+}
+clean() {
+  for i in F X Z; do
+    $IPT -$i
+    for t in nat mangle raw; do
+      $IPT -$i -t $t
+    done
+  done
+  $IPT -P INPUT ACCEPT
+  $IPT -P FORWARD ACCEPT
+  $IPT -P OUTPUT ACCEPT
+  $IPT -t nat -P PREROUTING ACCEPT
+  $IPT -t nat -P POSTROUTING ACCEPT
+  $IPT -t nat -P OUTPUT ACCEPT
+  $IPT -t mangle -P PREROUTING ACCEPT
+  $IPT -t mangle -P INPUT ACCEPT
+  $IPT -t mangle -P FORWARD ACCEPT
+  $IPT -t mangle -P OUTPUT ACCEPT
+  $IPT -t mangle -P POSTROUTING ACCEPT
+  $IPT -t raw -P PREROUTING ACCEPT
+  $IPT -t raw -P OUTPUT ACCEPT
+  for i in F X Z; do $IPT6 -$i; done
+  $IPT6 -P INPUT ACCEPT
+  $IPT6 -P FORWARD ACCEPT
+  $IPT6 -P OUTPUT ACCEPT
+  $IPT6 -t mangle -P PREROUTING ACCEPT
+  $IPT6 -t mangle -P INPUT ACCEPT
+  $IPT6 -t mangle -P FORWARD ACCEPT
+  $IPT6 -t mangle -P OUTPUT ACCEPT
+  $IPT6 -t mangle -P POSTROUTING ACCEPT
+}
+init_def_actions() {
+  $IPT -P INPUT DROP
+  $IPT -P FORWARD DROP
+  $IPT -P OUTPUT ACCEPT
+  $IPT6 -P INPUT DROP
+  $IPT6 -P FORWARD DROP
+  $IPT6 -P OUTPUT DROP
+}
+block_bad_tcpflags() {
+  $IPT -N BADFLAGS
+  $IPT -A BADFLAGS -j LOG $LOGOPT --log-prefix "IPT BADFLAGS: "
+  $IPT -A BADFLAGS -j DROP
+
+  $IPT -N TCP_FLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ACK,FIN FIN             -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ACK,PSH PSH             -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ACK,URG URG             -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags FIN,RST FIN,RST         -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags SYN,FIN SYN,FIN         -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags SYN,RST SYN,RST         -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ALL ALL                 -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ALL NONE                -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ALL FIN,PSH,URG         -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ALL SYN,FIN,PSH,URG     -j BADFLAGS
+  $IPT -A TCP_FLAGS -p tcp --tcp-flags ALL SYN,RST,ACK,FIN,URG -j BADFLAGS
+
+  $IPT -A INPUT -p tcp -j TCP_FLAGS
+}
+services() {
+  # CDN
+  {% set p = [ const.port.http, const.port.https ] | join(",") %}
+  $IPT -A INPUT -p tcp -m multiport --dport {{ p }} -j ACCEPT -m comment --comment "cdn services"
+  $IPT -t mangle -A OUTPUT -p tcp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Throughput -m comment --comment "cdn services"
+  {% if cdn.logstash is defined %}
+  {% set p = [ cdn.logstash.access_log.udp.port, cdn.logstash.error_log.udp.port ] | join(",") %}
+  # Logstash
+  $IPT -t mangle -A OUTPUT -p udp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Reliability -m comment --comment "logstash traffic"
+  {% endif %}
+  {% if softflowd is defined %}
+  # Softflowd
+  $IPT -t mangle -A OUTPUT -p udp --dport {{ softflowd.port }} -j TOS --set-tos Maximize-Reliability -m comment --comment "softflowd traffic"
+  {% endif %}
+  {% if memcached.connection == "tcp" %}
+  # Memcached TCP
+  $IPT -A INPUT -s {{ memcached.cluster_net }}/{{ memcached.cluster_netmask }} -j ACCEPT -m comment --comment "memcached_tcp"
+  $IPT -t mangle -A PREROUTING -s {{ memcached.cluster_net }}/{{ memcached.cluster_netmask }} -j ACCEPT -m comment --comment "memcached_tcp"
+  {% endif %}
+}
+ack_optimize(){
+  #  http://www.funtoo.org/Traffic_Control
+  $IPT -t mangle -N ack
+  $IPT -t mangle -A ack -m tos ! --tos Normal-Service -j RETURN
+  $IPT -t mangle -A ack -p tcp -m length --length 0:128 -j TOS --set-tos Minimize-Delay
+  $IPT -t mangle -A ack -p tcp -m length --length 128: -j TOS --set-tos Maximize-Throughput
+  $IPT -t mangle -A ack -j RETURN
+  $IPT -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,RST,ACK ACK -j ack
+}
+allows() {
+  # Office
+  {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 %}
+  $IPT -A INPUT -s {{ ip | resolve }} -j ACCEPT -m comment --comment "allbrightnet"
+  {% endfor %}
+  # Temp - 202.53.150.9
+  $IPT -A INPUT -s {{ 'cdn-g1-hk-06' | resolve }} -j ACCEPT -m comment --comment "allbrightnet temp"
+}
+proxy_heartbeat_cdn() {
+  {% set proxy_heartbeat_cdn = heartbeat is defined | ternary(heartbeat.outputs.proxy | selectattr("host", "match", "^%s" % inventory_hostname_short) | list | default([None], True) | first, "None") %}
+  {% if proxy_heartbeat_cdn %}
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+  # conntrack is required if NAT is used, that's the proxy hearbeat case
+  $IPT -t raw -I PREROUTING -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} {{ track }}
+
+  $IPT -t nat -A PREROUTING -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j DNAT --to {{ heartbeat.outputs.direct.host }} -m comment --comment "heartbeat_proxy"
+  $IPT -t nat -A POSTROUTING -p {{ heartbeat.outputs.direct.proto }} -d {{ heartbeat.outputs.direct.host }} --dport {{ heartbeat.outputs.direct.port }} -j SNAT --to-source {{ proxy_heartbeat_cdn.host | resolve }} -m comment --comment "heartbeat_proxy"
+  {% for ip in cdn_ips | unique %}
+  $IPT -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} -s {{ ip }} --dport {{ proxy_heartbeat_cdn.port }} -j ACCEPT -m comment --comment "heartbeat_proxy"
+  {% endfor %}
+  $IPT -t mangle -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j TOS --set-tos Maximize-Reliability -m comment --comment "heartbeat_proxy"
+  {% endif %}
+  echo
+}
+udomain() {
+  {% set ports = [['tcp',const.port.ssh], ['udp',const.port.snmp]] %}
+  {% if memcached.connection == "tcp" %}
+  {{ ports.append(['tcp', memcached.tcp.cluster_port]) }}
+  {% endif %}
+
+  $IPT -A INPUT -s 10.1.0.0/16 -j ACCEPT -m comment --comment "UDomain"
+  {% for ip in ipv4.udomain | default([])%}
+  {% for p in ports %}
+  $IPT -A INPUT -p {{ p[0] }} -s {{ ip | resolve }} --dport {{ p[1] }} -j ACCEPT -m comment --comment "UDomain"
+  {% endfor %}
+  {% endfor %}
+}
+other_tos() {
+  $IPT -t mangle -A OUTPUT -p udp --dport {{ const.port.ntp }} -j TOS --set-tos Minimize-Cost
+  $IPT -t mangle -A OUTPUT -p udp --dport {{ const.port.domain }} -j TOS --set-tos Maximize-Reliability
+  $IPT -t mangle -A OUTPUT -p tcp --dport {{ const.port.domain }} -j TOS --set-tos Maximize-Reliability
+}
+allow_non_tcp() {
+  {% set p = [ const.port.domain, const.port.ntp ] | join(",") %}
+  #$IPT -t raw -I PREROUTING -p udp -m multiport --sport {{ p }} {{ track }}
+  $IPT -A INPUT -p udp -m multiport --sport {{ p }} -m limit --limit 3/second -j ACCEPT -m comment --comment "dns, ntp responses"
+  #$IPT -A INPUT -p udp -m multiport --sport {{ p }} -m state --state ESTABLISHED -j ACCEPT -m comment --comment "dns, ntp responses"
+  # ICMP
+  $IPT -A INPUT -p icmp -m icmp --icmp-type echo-request -m limit --limit 3/second -j ACCEPT -m comment --comment "icmp"
+  #$IPT -t raw -I PREROUTING -p icmp -m icmp --icmp-type echo-reply {{ track }}
+  $IPT -A INPUT -p icmp -m icmp --icmp-type echo-reply -m limit --limit 3/second -j ACCEPT -m comment --comment "icmp responses"
+  #$IPT -A INPUT -p icmp -m icmp --icmp-type echo-reply -m state --state ESTABLISHED,RELATED -j ACCEPT -m comment --comment "icmp responses"
+}
+default_rej() {
+  $IPT -A INPUT ! -i lo -d 127.0.0.1 -j DROP -m comment --comment "block dos attack"
+  $IPT -A INPUT -p icmp -m icmp --icmp-type address-mask-request -j DROP -m comment --comment "avoid smurf attack"
+  $IPT -A INPUT -p icmp -m icmp --icmp-type timestamp-request -j DROP -m comment --comment "avoid smurf attack"
+  {% for ip in (ansible_default_ipv4.address | ipaddr('public') | ternary(ipv4.private,[])) + ipv4.iana_reserved %}
+  $IPT -t mangle -A PREROUTING ! -i lo -s {{ ip | resolve }} -j DROP -m comment --comment "block spoofed packets"
+  {% endfor %}
+  $IPT -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable -m comment --comment "RFC compliant - Port Unreachable when udp ports not open"
+  $IPT -A INPUT -p tcp -j REJECT --reject-with tcp-reset -m comment --comment "RFC compliant - TCP RST when tcp ports not open"
+  $IPT -A INPUT -j REJECT --reject-with icmp-proto-unreachable -m comment --comment "linux default, reject all remaining"
+}
+stateless_fw() {
+  # Stateless firewall!
+  $IPT -t raw -I PREROUTING {{ notrack }}
+  $IPT -t raw -I OUTPUT {{ notrack }}
+}
+start6() {
+  $IPT6 -A INPUT ! -i lo -d localhost -j DROP -m comment --comment "block dos attack"
+  $IPT6 -A INPUT -i lo -j ACCEPT -m comment --comment "loopback"
+  $IPT6 -A OUTPUT -o lo -j ACCEPT -m comment --comment "loopback"
+  $IPT6 -A INPUT -m state --state INVALID -j LOG $LOGOPT --log-prefix "IPTABLES INVALID: "
+  $IPT6 -A INPUT -m state --state INVALID -j DROP -m comment --comment "block invalid packets"
+  $IPT6 -A INPUT -p tcp -m state --state ESTABLISHED,RELATED -j ACCEPT -m comment --comment "allow any established connections"
+}
+do_start() {
+  clean
+  init_def_actions
+  kernel
+  stateless_fw
+  block_bad_tcpflags
+  $IPT -A INPUT -p tcp ! --syn -j ACCEPT -m comment --comment "allow any established connections"
+  $IPT -A INPUT -p icmp --icmp-type destination-unreachable -j ACCEPT -m comment --comment "icmp routing messages"
+  $IPT -A INPUT -f -j DROP -m comment --comment "discard any left over fragments"
+  services
+  # loopback
+  $IPT -A INPUT -i lo -j ACCEPT -m comment --comment "loopback"
+  ack_optimize
+  allows
+  proxy_heartbeat_cdn
+  $IPT -A INPUT -p tcp -s 183.178.132.168 --dport {{ const.port.ssh }} -j ACCEPT -m comment --comment "Ken Home"
+  #$IPT -A INPUT -p tcp -s 183.178.132.168 --dport 8081 -j ACCEPT
+  #udomain
+  other_tos
+  allow_non_tcp
+  default_rej
+}
+main() {
+  case "$1" in
+    start)
+      do_start
+      start6
+    ;;
+    stop)
+      clean
+    ;;
+  esac
+}
+main $*

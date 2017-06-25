@@ -1,0 +1,58 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+
+{% if is_ip_based_upstream %}
+upstream @{{ res_id }}_upstream {
+  ip_hash;
+  {% for o in origin %}
+  server {{ o.ip }}:{{ o.port | default(80) | int }}{% if o.weight is defined %} weight={{ o.weight | int }}{% endif %} max_fails=3 fail_timeout=1s;
+  {% endfor %}
+  keepalive 10;
+}
+{% endif %}
+server {
+  listen {{ port }};
+#  listen [::]:{{ port }};
+
+  {% include "data/common.j2" %}
+
+
+  location ^~ /.well-known/acme-challenge/ {
+    proxy_pass http://portal.allbrightnet.com;
+  }
+  {% if static_caching_enabled %}
+  {% include "data/static_cache.j2" %}
+  {% endif %}
+
+  {% include "data/dynamic_cache.j2" %}
+
+}
+
+{% if ssl_enabled %}
+{% if is_ip_based_upstream  %}
+upstream @{{ res_id }}_upstream_ssl {
+  ip_hash;
+  {% for o in origin %}
+  server {{ o.ip }}:443{% if o.weight is defined %} weight={{ o.weight | int }}{% endif %} max_fails=3 fail_timeout=1s;
+  {% endfor %}
+  keepalive 10;
+}
+{% endif %}
+server {
+  listen 443 ssl{% if http_ver | int == 2 %} http2{% endif %};
+#  listen [::]:443 ssl{% if http_ver | int == 2 %} http2{% endif %};
+  gzip off;
+
+  {% include "data/common.j2" %}
+
+
+  ssl_certificate     {{ nginx.cert_root | basename }}/{{ res_id }}/{{ cert_pem_name }};
+  ssl_certificate_key {{ nginx.cert_root | basename }}/{{ res_id }}/{{ key_pem_name }};
+  {% if static_caching_enabled %}
+  {% include "data/static_cache.j2" %}
+  {% endif %}
+
+  {% include "data/dynamic_cache.j2" %}
+
+}
+{% endif %}

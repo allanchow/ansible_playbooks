@@ -1,0 +1,7 @@
+path-exclude /usr/share/locale/*
+path-include /usr/share/locale/en*
+path-include /usr/share/locale/de*
+path-include /usr/share/locale/es*
+path-include /usr/share/locale/ja*
+path-include /usr/share/locale/fr*
+path-include /usr/share/locale/zh*

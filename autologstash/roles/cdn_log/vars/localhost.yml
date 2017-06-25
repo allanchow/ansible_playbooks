@@ -1,0 +1,29 @@
+---
+# For local debug
+access_log:
+  templatename: ngx-access-cdn
+  inputs:
+    udp:
+      - host: 127.0.0.1
+        port: 20514
+    tcp:
+      - host: 127.0.0.1
+        port: 20514
+#   outputs:
+#     - type: elasticsearch
+#       host:
+#         - 127.0.0.1:9200
+#       index: ngx-access-cdn
+# error_log:
+#   inputs:
+#     - type: udp
+#       host: 127.0.0.1
+#       port: 20515
+#     - type: tcp
+#       host: 127.0.0.1
+#       port: 20515
+#   outputs:
+#     - type: elasticsearch
+#       host:
+#         - 127.0.0.1:9200
+#       index: ngx-error-cdn

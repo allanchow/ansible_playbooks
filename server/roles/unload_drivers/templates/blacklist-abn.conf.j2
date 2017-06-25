@@ -1,0 +1,21 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+
+# no virtualization
+blacklist kvm
+blacklist kvm_intel
+blacklist kvm_amd
+
+# no power meter
+blacklist acpi_power_meter
+
+# nobeep
+blacklist pcspkr
+
+# no usb storage devices
+install uas /bin/true
+install usb-storage /bin/true
+
+# no firewire
+install firewire_core /bin/true
+install firewire_ohci /bin/true

@@ -1,0 +1,40 @@
+---
+#- set_fact: logstash_nodename={{ role_path | basename }}
+- local_action: stat
+    path="roles/{{ logstash_nodename }}/vars/{{ inventory_hostname_short }}.yml"
+  register: vv
+- meta: end_play
+  when: vv.stat.exists == false
+- include_vars:
+    file: "vars/{{ inventory_hostname_short }}.yml"
+    name: node_vars
+
+- name: Env | [{{ logstash_nodename }}] - Create Node Layout
+  file: path="{{ logstash.nodes_root }}/{{ item }}" state=directory mode=0755
+  with_items:
+    - "{{ logstash_nodename }}"
+    - "{{ logstash_nodename }}/conf.d"
+    - "{{ logstash_nodename }}/logs"
+    - "{{ logstash_nodename }}/data"
+    - "{{ logstash_nodename }}/data/queue"
+
+- name: Env | [{{ logstash_nodename }}] - Node Folder Permission
+  file:
+    path: "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item }}"
+    owner: "{{ logstash.user }}"
+    group: "{{ logstash.user }}"
+    recurse: yes
+    mode: 0755
+  with_items:
+    - logs
+    - data
+
+- name: Deploy | [{{ logstash_nodename }}] - Generate Logstash Node Config
+  template:
+    src: "{{ item }}"
+    dest: "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - log4j2.properties.j2

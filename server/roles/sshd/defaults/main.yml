@@ -1,0 +1,216 @@
+---
+sshd__base_packages:
+  - openssh-server
+  - openssh-client
+
+sshd__recommended_packages: "{{ (ansible_distribution_release in [ 'wheezy', 'jessie', 'precise', 'trusty', 'xenial' ]) | ternary([ 'openssh-blacklist', 'openssh-blacklist-extra' ], []) }}"
+
+#sshd__optional_packages: [ "molly-guard" ]
+sshd__packages: []
+
+# OpenSSH server configuration
+# --------------------------------
+
+sshd__ports: [ 22 ]
+
+# List of IP addresses on which ``sshd`` should listen for new connections. If
+# it"s empty, ``sshd`` listens on all interfaces.
+sshd__listen:
+  - 0.0.0.0
+
+# List of SSH host keys that should be enabled, in order of preference.
+sshd__host_keys:
+  - ed25519
+  - rsa
+  - ecdsa
+
+sshd__banner: "none"
+sshd__log_level: "INFO"
+sshd__permit_root_login: "no"
+sshd__password_authentication: "yes"
+sshd__x11_forwarding: "no"
+sshd__max_auth_tries: 4
+
+# Maximum number of unauthenticated connections (3), after which there's 80%
+# probability of next unauthenticated connection to be dropped, finishing at 7,
+# after which all new unauthenticated connections will be refused.
+sshd__max_startups: 3:80:7
+
+# Time after which unauthenticated sessions are disconnected.
+sshd__login_grace_time: 30s
+
+# Specify if ``sshd`` should use unprivileged processes for incoming session
+# authentication. Setting this to ``sandbox`` enables use of additional
+# kernel restrictions.
+sshd__privilege_separation: sandbox
+
+# Additional :manpage:`sshd_config(5)` options specified in a YAML text block format.
+sshd__custom_options: ""
+
+# Authorized keys management
+# ------------------------------
+
+sshd__authorized_keys: "{{ sshd__authorized_keys_system + sshd__authorized_keys_user }}"
+
+sshd__authorized_keys_system:
+  - "/etc/ssh/authorized_keys/%u"
+
+sshd__authorized_keys_user:
+  - "%h/.ssh/authorized_keys"
+
+# System-wide host fingerprints
+# ---------------------------------
+# List of FQDN hostnames that should be scanned to add host fingerprints to the
+# system-wide known hosts file (global).
+sshd__known_hosts: []
+
+# List of FQDN hostnames that should be scanned to add host fingerprints to the
+# system-wide known hosts file (host group).
+sshd__group_known_hosts: []
+
+# List of FQDN hostnames that should be scanned to add host fingerprints to the
+# system-wide known hosts file (host).
+sshd__host_known_hosts: []
+
+# System-wide file where host fingerprints are stored.
+sshd__known_hosts_file: /etc/ssh/ssh_known_hosts
+
+# Command used to scan host fingerprints into system-wide known hosts file.
+sshd__known_hosts_command: ssh-keyscan -H -T 10
+
+# Group-based access control
+# ------------------------------
+
+# List of UNIX groups which allow connections to SSH service (global).
+# sshd__allow_groups:
+#   - root
+#   - admins
+#   - sshusers
+#   - sftponly
+
+sshd__allow_groups: []
+
+# List of UNIX groups which allow connections to SSH service (host group).
+sshd__group_allow_groups: []
+
+# List of UNIX groups which allow connections to SSH service (host).
+sshd__host_allow_groups: []
+
+# Match conditional blocks
+# ----------------------------
+
+# List of conditional ``Match`` blocks to include in ``sshd_config``.
+# Required parameters:
+#
+# - ``match``: specify User, Group, or other Match arguments which should
+#   activate a given configuration block.
+#
+# - ``options``: YAML text block which contains :manpage:`sshd_config(5)` options
+#   active in a given Match block.
+#
+sshd__match_list: []
+
+# Default ``Match`` conditional block which defines configuration for SFTPonly
+# accounts.
+sshd__match_group_sftponly:
+  match: Group sftponly
+  options: |
+    AuthorizedKeysFile "{{ sshd__authorized_keys_system | join(' ') }}"
+    ChrootDirectory %h
+    X11Forwarding no
+    AllowAgentForwarding no
+    AllowTcpForwarding no
+    PermitTunnel no
+    ForceCommand internal-sftp
+
+# Encryption parameters
+# -------------------------
+
+# Dict with list of ciphers which should be used by the ``sshd`` server,
+# depending on available version, ordered from strongest to weakest. Newer version
+# supersedes older version.
+sshd__ciphers_map:
+
+  # Source: https://wiki.mozilla.org/Security/Guidelines/OpenSSH
+  "6.5":
+    - chacha20-poly1305@openssh.com
+    - aes256-gcm@openssh.com
+    - aes128-gcm@openssh.com
+    - aes256-ctr
+    - aes192-ctr
+    - aes128-ctr
+
+  # Source: https://xivilization.net/~marek/blog/2015/01/12/secure-secure-shell-on-debian-wheezy/
+  "6.0":
+    - aes256-ctr
+    - aes192-ctr
+    - aes128-ctr
+
+# List of additional key exchange algorithms which should be used by the
+# ``sshd`` server, depending on available version, depending on available
+# version, ordered from stronger to weaker. Newer version supersedes older
+# version.
+sshd__ciphers_additional: []
+
+#
+# Dict with list of key exchange algorithms which should be used by the
+# ``sshd`` server, depending on available version, ordered from strongest to
+# oldest. Newer version supersedes older version.
+sshd__kex_algorithms_map:
+
+  # Source: https://wiki.mozilla.org/Security/Guidelines/OpenSSH
+  "6.5":
+    - curve25519-sha256@libssh.org
+    - ecdh-sha2-nistp521
+    - ecdh-sha2-nistp384
+    - ecdh-sha2-nistp256
+    - diffie-hellman-group-exchange-sha256
+
+  # Source: https://xivilization.net/~marek/blog/2015/01/12/secure-secure-shell-on-debian-wheezy/
+  "6.0":
+    - diffie-hellman-group-exchange-sha256
+
+# List of additional key exchange algorithms which should be used by the
+# ``sshd`` server, depending on available version, depending on available
+# version, ordered from stronger to weaker. Newer version supersedes older
+# version.
+sshd__kex_algorithms_additional: []
+
+#
+# Dict with list of message authentication code algorithms which should be used
+# by the ``sshd`` server, depending on available version, ordered from stronger
+# to weaker. Newer version supersedes older version.
+sshd__macs_map:
+
+  # Source: https://wiki.mozilla.org/Security/Guidelines/OpenSSH
+  "6.5":
+    - hmac-sha2-512-etm@openssh.com
+    - hmac-sha2-256-etm@openssh.com
+    - umac-128-etm@openssh.com
+    - hmac-sha2-512
+    - hmac-sha2-256
+    - umac-128@openssh.com
+
+  # Source: https://xivilization.net/~marek/blog/2015/01/12/secure-secure-shell-on-debian-wheezy/
+  "6.0":
+    - hmac-sha2-512
+    - hmac-sha2-256
+    - hmac-ripemd160
+
+# List of additional message authentication code algorithms to support
+# by the ``sshd`` server, depending on available version, ordered from stronger
+# to weaker. Newer version supersedes older version.
+sshd__macs_additional: []
+
+#
+# Specify minimum size of Diffie-Hellman parameters available to the SSH
+# server. Parameters smaller than the given amount will be removed from the
+# :file:`/etc/ssh/moduli` file.
+sshd__moduli_minimum: 2048
+
+# If set to True, only the first item (which is considered the strongest method
+# available) from the lists :envvar:`sshd__ciphers_map`,
+# :envvar:`sshd__kex_algorithms_map` and :envvar:`sshd__macs_map` will be configured for
+# ``sshd``. Use this with care as it will deny access to anyone not able to use
+# the first cryptographic method.
+sshd__paranoid: False

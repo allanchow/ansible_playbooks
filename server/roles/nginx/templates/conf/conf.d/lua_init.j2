@@ -1,0 +1,111 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+-- {{ ansible_managed }}
+
+-- require "resty.iputils"
+require "resty.core"
+resty_ngx_re  = require "ngx.re"
+cjson   = require "cjson"
+
+--resolver = require "resty.dns.resolver"
+
+--http://qiita.com/toritori0318/items/a9305d528b52936c0573
+-- r, err = resolver:new {
+--   nameservers = {{"127.0.0.1", 53}},
+--   retrans = 3,    -- 3 retransmissions on receive timeout
+--   timeout = 1000, -- 1 sec
+-- }
+-- if not r then
+--   ngx.log(ngx.ERR, "failed to instantiate the resolver: ", err)
+--   ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+-- end
+-- function dns_query(domain)
+-- -- dns query
+--   local answers, err = r:query(domain)
+--   if not answers then
+--     ngx.log(ngx.ERR, "failed to query the DNS server: ", err)
+--     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+--   end
+--   if answers.errcode then
+--     ngx.log(ngx.ERR, "dns server returned error code: ", answers.errcode, ": ", answers.errstr)
+--     ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+--   end
+--
+--   -- set ctx
+--   ngx.ctx.upstream_servers = answers
+-- end
+logger0 = require "resty.logger.socket0"
+if not logger0.initted() then
+  local ok, err = logger0.init {
+    host = '{{ cdn.logstash.access_log.udp.host }}',
+    port = {{ cdn.logstash.access_log.udp.port }},
+    sock_type = 'udp',
+    timeout = 2000,
+    max_retry_times = 10,
+    retry_interval = 500,
+    max_buffer_reuse = 100,
+    pool_size = {{ nginx.tcp_keepalive_pool }},
+    flush_limit = 1,
+    drop_limit = {{ nginx.udp_buffer_size }}
+  }
+  if not ok then
+    ngx.log(ngx.ERR, "failed to initialize the logger0:", err)
+    return
+  end
+end
+-- logger1 = require "resty.logger.socket1"
+function access_log(msg)
+  local bytes, err = logger0.log(msg)
+  if err then
+    ngx.log(ngx.ERR, "failed to log message:", err)
+    return
+  end
+end
+function trim(s)
+  local from = s:match"^%s*()"
+  return from > #s and "" or s:match(".*%S", from)
+end
+function __to_n(n, def)
+  def = def or nil
+  if n == nil then return def end
+  n = trim(n)
+  return n == '' and def or tonumber(n)
+end
+function __to_s(s, def)
+  def = def or nil
+  if s == nil then return def end
+  s = trim(s)
+  return s == '' and def or tostring(s)
+end
+function __to_ip(ip)
+  if ip == nil or type(ip) ~= "string" then return nil end
+  -- check for format 1.11.111.111 for ipv4
+  local chunks = {ip:match("(%d+)%.(%d+)%.(%d+)%.(%d+)")}
+  if #chunks == 4 then
+    for _,v in pairs(chunks) do
+      if tonumber(v) > 255 then return nil end
+    end
+    return ip
+  end
+  -- check for ipv6 format, should be 8 'chunks' of numbers/letters
+  -- without trailing chars
+  local chunks = {ip:match(("([a-fA-F0-9]*):"):rep(8):gsub(":$","$"))}
+  if #chunks == 8 then
+    for _,v in pairs(chunks) do
+      if #v > 0 and tonumber(v, 16) > 65535 then return nil end
+    end
+    return ip
+  end
+  return nil
+end
+function dump(o)
+ if type(o) == 'table' then
+    local s = '{ '
+    for k,v in pairs(o) do
+       if type(k) ~= 'number' then k = '"'..k..'"' end
+       s = s .. '['..k..'] = ' .. dump(v) .. ','
+    end
+    return s .. '} '
+ else
+    return tostring(o)
+ end
+end

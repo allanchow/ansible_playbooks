@@ -1,0 +1,11 @@
+---
+
+- name: Ensure basic services are running and enabled as configured.
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  with_items:
+    - cron
+    - rsyslog
+    - ssh

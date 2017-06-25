@@ -1,0 +1,420 @@
+---
+# TODO: Announce msg to Slack
+# force_update in every resources => delete conf
+#
+# Version: 1.5.0
+# Author: Gnought
+
+
+#  ██████  ███████ ███    ██      ██████  ██████  ███    ██ ███████
+# ██       ██      ████   ██     ██      ██    ██ ████   ██ ██
+# ██   ███ █████   ██ ██  ██     ██      ██    ██ ██ ██  ██ █████
+# ██    ██ ██      ██  ██ ██     ██      ██    ██ ██  ██ ██ ██
+#  ██████  ███████ ██   ████      ██████  ██████  ██   ████ ██
+
+- name: Phase | Generate Conf
+  hosts: localhost
+  connection: local
+  become: no
+  gather_facts: False
+  force_handlers: True
+  pre_tasks:
+    # force to load inv_deploy vars, load back targeted host vars for recover any overwritten values
+    - include_vars:
+        file: "{{ item }}"
+      with_items:
+        - "group_vars/{{ inv_deploy }}.yml"
+        - "../group_vars/{{ inv_deploy }}.yml"
+        - "host_vars/{{ inventory_hostname_short }}.yml"
+      when: inv_deploy != inventory_hostname_short
+
+    - name: "[C] | Portal | API Authentication"
+      uri:
+        url: "{{ api_portal_endpoint }}/authenticate"
+        method: POST
+        body: >-
+          {
+          "username":"{{ api_user }}",
+          "password":"{{ api_pw }}",
+          "api_key":"{{ api_portal_key }}"
+          }
+        headers: "{{ portal_def_headers }}"
+        body_format: json
+        return_content: yes
+        status_code: 200
+      register: token_response
+      tags:
+        - always
+      until: token_response.json['token'] is defined
+      retries: 1
+      delay: 15
+      failed_when: token_response.json['token'] is not defined
+
+    - name: Portal | Granted Access
+      set_fact: token="{{ token_response.json['token'] | mandatory }}"
+      tags: always
+
+    - name: "[C] | Portal | Get JSON Resources"
+      uri:
+        url: "{{ api_portal_endpoint }}/cdn/get_processing_resources?token={{ token }}"
+        headers: "{{ portal_def_headers }}"
+        body_format: json
+        return_content: yes
+        status_code: 200
+      register: output
+      tags: always
+      failed_when: output | failed
+
+    - name: Deploy | Verify Targets
+      fail: msg={{ 'Target [%s] is not in ansible inventory' % item }}
+      when: groups[item] is not defined
+      with_items: "{{ inv_deploy }}"
+#      when: inv_deploy != "localhost"
+
+    # - fail: msg={{ output }}
+    #   when: True
+    #- set_fact:
+    #    output: "{{ lookup('file', 'cdn-advanced.json') | from_json }}"
+    # We skip any works on deleting set
+    - name: Env | Propagate deletion set, and check set
+      set_fact:
+        resource: "{{ res }}"
+        do_check: "{{ res | difference(_del_set) }}"
+        cus_del: "{{ _del_set }}"
+      vars:
+        res: "{{ output.json['resources']  }}"
+        #res: "{{ output['resources'] }}"
+        _del_set: "{{ res | json_query('[?status==`%s`]' | format(s_deleting)) }}"
+
+    - set_fact:
+        resp_body: "{{ resp_body | default([]) + [{'resource_id': item.resource_id, 'old_status': item.status, 'pop_error':0, 'errors':{}}] }}"
+      with_items: "{{ resource }}"
+
+    - meta: end_play
+      when: do_check | length == 0
+
+    - name: 'JSON | Build CDN IP list'
+      set_fact:
+        #cdn_ips: "{{ cdn_ips | default([]) + [lookup('dig', '%s.allbrightnetwork.com/A' % hostvars[item].inventory_hostname)] }}"
+        cdn_ips: "{{ cdn_ips | default([]) + [lookup('dig', '%s/A' % (hostvars[item].inventory_hostname_short))] }}"
+        #cdn_ips: "{{ cdn_ips | default([]) + [lookup('dig', '%s%s/A' % (hostvars[item].inventory_hostname_short, cdn_suffix))] }}"
+      with_items:
+        - "{{ groups[inv_deploy] }}"
+
+    - name: JSON | Validation
+      set_fact:
+        j_invalid_code:
+          - "{{ error_codes.E1001 }}"
+          - "{{ error_codes.E1001 }}"
+          - "{{ error_codes.E1002 }}"
+          - "{{ error_codes.E1003 }}"
+          - "{{ error_codes.E1004 }}"
+        j_invalid_set:
+        # only has-cname records
+          #- ["{{ do_check | json_query('[?cname==null || cname==``]') }}"]
+          - ["{{ do_check | selectattr('cname', 'undefined') | list }}"]
+          - ["{{ do_check | selectattr('cname', 'defined') | selectattr('cname', 'is_empty_string') | list }}"]
+        # Unique CNAME
+          - >-
+            {%- set tmp = [] -%}
+            {%- for grouper, res in do_check | selectattr('cname', 'defined') | list | groupby('cname') if res | length > 1 -%}
+            {{ tmp.append(grouper) }}
+            {%- endfor -%}
+            [{{ do_check | selectattr('cname', 'defined') | selectattr('cname', 'in', tmp) | list }}]
+        # cdn_hostname not in blacklist
+          - ["{{ do_check | selectattr('cdn_hostname', 'search', (cdn_hostname_domain_blacklist | join('$|'))+'$', ignorecase=True) | list }}"]
+        # origin IP, port, weight
+          - >-
+            {%- set tmp = do_check | json_query('[?origin==null]') -%}
+            {%- for res in do_check | selectattr('origin', 'defined') -%}
+            {%- for o in res.origin -%}
+            {%- if not (
+                  (o | length > 0) and
+                  (
+                    (o | selectattr('ip', 'defined') and o.ip | default(None, True) | ipaddr('address') | ipaddr('public') and o.domain is not defined)
+                    or
+                    o.domain is defined
+                  ) and
+                  (o.port | default(80, True) | int > 0 and o.port | default(80, True) | int < 65535) and
+                  (o.weight | default(10, True) | int > 0)
+                  ) or o | selectattr('ip', 'defined') | selectattr('ip', 'in', cdn_ips) | list | length > 0 -%}
+            {{ tmp.append(res) }}
+            {%- endif -%}
+            {%- endfor -%}
+            {%- endfor -%}
+            [{{ tmp }}]
+
+    - name: JSON | Skip invalid records
+      set_fact:
+        do_check: "{{ do_check | difference(item.1) }}"
+        resp_body: "{{ resp_body | difference(err_resp_body) | union(err_resp_body | map('combine',{'errors':item.0}, recursive=True) | list) }}"
+      vars:
+        err_resp_body: "{{ resp_body | selectattr('resource_id', 'in', item.1  | map(attribute='resource_id') | list) | list }}"
+      changed_when: item.1 | length > 0
+      with_together:
+        - "{{ j_invalid_code }}"
+        - "{{ j_invalid_set }}"
+
+    - debug: msg="{{ resp_body }}"
+
+    - name: Env | Propagate valid active set, update set, and pending set
+      set_fact:
+        cus_add: "{{ _add_set }}"
+        cus_update: "{{ _update_set }}"
+        cus_active: "{{ _active_set }}"
+        ngx_invalid_cuslist: []
+      vars:
+        _add_set: "{{ do_check | json_query('[?status==`%s`]' | format(s_pending)) }}"
+        _update_set: "{{ do_check | json_query('[?status==`%s`]' | format(s_updating)) }}"
+        _active_set: "{{ do_check | json_query('[?status==`%s`]' | format(s_active)) }}"
+
+    - meta: end_play
+      when: cus_add | length == 0 and cus_update | length == 0 and cus_active | length == 0
+
+    - name: "[C] | Env | xNS API Presence"
+      stat: path="{{ cmd_xns }}"
+      register: xns
+      failed_when: xns.stat.exists == False or xns.stat.executable|default(False) == False
+      when: dryrun | bool == False
+
+    - name: Env | Reset configuration root dir
+      file: path="{{root}}/{{ mode }}" state={{ item }} mode=0777
+      with_items:
+        - "absent"
+        - "directory"
+
+  tasks:
+#    - name: Conf Staging | Create Dir Layout
+#      file: path={{ customers_root }} state=directory
+
+    - name: "[C] | Conf Staging | Nginx Presence"
+      stat: path="{{ root }}/nginx"
+      register: nginx_bin
+      failed_when: nginx_bin.stat.exists == False or nginx_bin.stat.executable|default(False) == False
+
+    - name: Conf Staging | Preparation
+      file: path="{{ item }}" state=directory mode=0777
+      with_items:
+        - "{{ root }}/logs"
+        - "{{ nginx.resource_root }}"
+        - "{{ nginx.customers_root }}"
+        - "{{ nginx.cert_root }}"
+
+    - include: inc.conf.yml
+      vars:
+        status: "{{ item.status }}"
+        res_id: "{{ '%06d' | format(item.resource_id | int) }}"
+        cdn_hostname_flat: "{{ item.cdn_hostname | replace('*.','') | replace('.','_') }}"
+        cdn_hostname: "{{ item.cdn_hostname }}"
+        port: "{{ item.port | default(80, True) | int }}"
+    #    cname: "{{ item.cname }}"
+        cname: "{{ cname_domain | list | map('regex_replace', '(.*)', '%s.\\1' % item.cname | regex_replace(cname_regex, '\\g<prefix>\\g<id>') ) | join(' ') }}"
+        host_header: "{{ item.host_header | default('$host', True) }}"
+        origin: "{{ item.origin }}"
+        is_ip_based_upstream: "{{ origin | selectattr('ip', 'defined') | list | length > 0 | bool }}"
+        upstream_target: "{{ is_ip_based_upstream | ternary('@%s_upstream$ssl_upstream' % res_id, origin[0].domain | default('')) }}"
+#        domain_hack: item.origin is defined and item.origin | length == 1 and item.origin | default([]) | first | selectattr('ip', 'ipaddr') | length == 0
+        static_caching_enabled: "{{ item.file_type is defined and item.file_type | length > 0 | bool }}"
+        file_type: "{{ item.file_type | default(omit) }}"
+        cache_exp_sec: "{{ item.max_age | default(1800, True) | int }}"
+        ssl_enabled: "{{ item.ssl_cert is defined | bool and item.ssl_key is defined | bool }}"
+        http_ver: "{{ item.http | default(1, True) | int }}"
+      with_flattened:
+        - "{{ cus_update }}"
+        - "{{ cus_add }}"
+        - "{{ cus_active }}"
+
+    - name: Conf Final | Skip any invalid active set, update set, and pending set
+      set_fact:
+        cus_add: "{{ _add_set }}"
+        cus_update: "{{ _update_set }}"
+        cus_active: "{{ _active_set }}"
+        #stop_play: "{{ _add_set | length == 0 and _update_set | length == 0 and _active_set | length == 0 }}"
+        resp_body: "{{ resp_body | difference(err_resp_body) | union(err_resp_body | map('combine',{'errors':error_codes.E1007}, recursive=True) | list) }}"
+      vars:
+        _add_set: "{{ cus_add | difference(ngx_invalid_cuslist) }}"
+        _update_set: "{{ cus_update | difference(ngx_invalid_cuslist) }}"
+        _active_set: "{{ cus_active | difference(ngx_invalid_cuslist) }}"
+        err_resp_body: "{{ resp_body | selectattr('resource_id', 'in', ngx_invalid_cuslist | map(attribute='resource_id') | list) | list }}"
+
+    - meta: end_play
+      when: (cus_add | length == 0 and cus_update | length == 0 and cus_active | length == 0) or dryrun | bool == True
+
+    - name: "[C] | Conf Final | Valid Preparation"
+      vars:
+        res_id: "*"
+      template:
+        src: config-test.conf.j2
+        dest: "{{ root }}/{{ mode }}/config-test.conf"
+        force: True
+        mode: 0644
+
+    - name: "[C] | Conf Final | Valid all conf via Nginx once"
+      command: "{{ root }}/nginx -p {{ root }} -t -c {{ root }}/{{ mode }}/conf/config-test.conf"
+      become: true
+      register: ngx_result
+      failed_when: ngx_result | failed
+
+    - name: Conf Final | Archive Resources
+      vars:
+        conf: "{{ root }}/{{ mode }}/{{ conf_res_tar }}"
+      shell: "find {{ nginx.customers_root | basename }} -maxdepth 1 -name '*.conf' | tar -rvf {{ conf }} --files-from - && gzip {{ conf }}"
+      args:
+        chdir: "{{ nginx.resource_root }}"
+      when: ngx_result | succeeded
+
+    - name: Conf Final | Archive Certs
+      vars:
+        conf: "{{ root }}/{{ mode }}/{{ conf_cert_tar }}"
+      shell: "find . -maxdepth 2 -name '*' | tar -rvf {{ conf }} --files-from - && gzip {{ conf }}"
+      args:
+        chdir: "{{ nginx.cert_root }}"
+      when: ngx_result | succeeded
+    #
+    # - fail: msg='break'
+    #   when: true
+
+# ██████  ███████ ██████  ██       ██████  ██    ██
+# ██   ██ ██      ██   ██ ██      ██    ██  ██  ██
+# ██   ██ █████   ██████  ██      ██    ██   ████
+# ██   ██ ██      ██      ██      ██    ██    ██
+# ██████  ███████ ██      ███████  ██████     ██
+
+- name: Phase | Deployment
+  hosts: "{{ inv_deploy }}"
+  any_errors_fatal: False
+  strategy: free
+  become_method: sudo
+  become: yes
+  gather_facts: False
+
+  vars:
+    cus_add: "{{ hostvars['localhost']['cus_add']  | default([]) }}"
+    cus_update: "{{ hostvars['localhost']['cus_update'] | default([]) }}"
+    cus_del: "{{ hostvars['localhost']['cus_del'] | default([]) }}"
+    cus_active: "{{ hostvars['localhost']['cus_active'] | default([])  }}"
+
+  tasks:
+
+    - meta: end_play
+      when: (cus_add | length == 0 and cus_update | length == 0 and cus_active | length == 0 and cus_del | length == 0) or dryrun | bool == True
+
+    - block:
+      - name: Deploy | check connectivity to hosts
+        local_action: wait_for
+            port="{{ ansible_port | default(22, True) }}"
+            state='started'
+            host="{{ ansible_host }}"
+            connect_timeout=5
+            timeout=10
+            search_regex='Ubuntu'
+            delay=5
+        become: False
+        register: ssh
+        failed_when: "{{ ssh.state | default('absent') != 'started' }}"
+
+      - name: Deploy | ensure hosts is a known host
+        local_action: lineinfile
+          dest=~/.ssh/known_hosts
+          create=True
+          state=present
+          line="{{ lookup('pipe', 'ssh-keyscan -t rsa %s' % inventory_hostname) }}"
+          mode=0644
+        become: False
+
+      # Did it Portal
+      # - name: Conf | Remove DNS
+      #   include: inc.dns.yml
+      #   static: no
+      #   with_items:
+      #     - "{{ cus_del }}"
+
+      - name: Conf | Remove config
+        file:
+          path: "{{ nginx.customers_root }}/{{ item.resource_id }}.conf"
+          state: absent
+        register: remove_config
+        failed_when: remove_config | failed
+        with_items:
+          - "{{ cus_del }}"
+
+      - name: Conf | Create Folder Layout
+        file: path="{{ nginx.conf_root }}/{{ item.path }}" state=directory mode={{ item.mode }}
+        with_items:
+          - { mode: "0755", path: "{{ nginx.resource_root | basename }}" }
+          - { mode: "0700", path: "{{ nginx.cert_root | basename }}" }
+
+      - name: Conf | Unarchive & Deploy
+        unarchive:
+          src: "{{ root }}/{{ mode }}/{{ item.src }}"
+          dest: "{{ item.dest }}"
+          owner: root
+          group: root
+          mode: "{{ item.mode }}"
+        retries: 1
+        delay: 15
+        register: untar_result
+        failed_when: untar_result | failed
+        with_items:
+          - { src: "{{ conf_res_tar }}.gz", dest: "{{ nginx.resource_root }}", mode: "0644"}
+          - { src: "{{ conf_cert_tar }}.gz", dest: "{{ nginx.cert_root }}", mode: "0600"}
+        when: cus_add | length > 0 or cus_update | length > 0 or cus_active | length > 0
+
+      - name: Nginx | Test Conf
+        command: "{{ nginx.sbin_root }}/nginx -t"
+        register: ngx_result
+        failed_when: ngx_result | failed
+
+      - name: Nginx | Reload
+        command: "{{ nginx.sbin_root }}/nginx -s reload"
+        when: ngx_result | succeeded
+
+      rescue:
+        - name: Set Flag for Unexpected Results
+          set_fact:
+            pop_error: True
+
+
+# ██    ██ ██████  ██████   █████  ████████ ███████
+# ██    ██ ██   ██ ██   ██ ██   ██    ██    ██
+# ██    ██ ██████  ██   ██ ███████    ██    █████
+# ██    ██ ██      ██   ██ ██   ██    ██    ██
+#  ██████  ██      ██████  ██   ██    ██    ███████
+
+- name: Phase | Update DNS & Return Status
+  hosts: localhost
+  connection: local
+  any_errors_fatal: True
+  become: no
+  gather_facts: False
+  force_handlers: True
+  tasks:
+
+    - meta: end_play
+      when: resource | length == 0 or dryrun | bool == True
+
+    - include: inc.dns.yml
+      static: no
+      with_items: "{{ cus_add }}"
+
+    - name: Portal | return status
+      vars:
+        pop_error: >-
+            {%- set tmp = [] -%}
+            {%- set inv_deploy = [inv_deploy] if inv_deploy is string -%}
+            {%- for grp in inv_deploy -%}
+              {%- for hosts in groups[grp] if hostvars[hosts]['pop_error'] is defined and hostvars[hosts]['pop_error'] -%}
+                {{ tmp.append(1) }}
+              {%- endfor -%}
+            {%- endfor -%}
+            {{ tmp | length | ternary(tmp, [0]) | unique | first }}
+      uri:
+        url: "{{ api_portal_endpoint }}/cdn/update_resource_status?token={{ token }}"
+        method: POST
+        body: "{{ item }}"
+        headers: "{{ portal_def_headers }}"
+        body_format: json
+    #        return_content: yes
+        status_code: 200
+      with_items:
+        - "{{ resp_body | map('combine',{'pop_error':pop_error | int }) | list }}"

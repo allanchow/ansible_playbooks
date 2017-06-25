@@ -1,0 +1,51 @@
+---
+- name: Ensure /usr/local/bin directory
+  file: path="{{ base_root }}/bin" state="directory" mode=0755 owner=root group=root
+  when: softflowd_enabled
+
+- name: Copy softflowd
+  copy:
+    src: "{{ item }}"
+    dest: "{{ base_root }}/bin"
+    force: yes
+    mode: 0755
+    owner: root
+    group: root
+  with_items:
+    - softflowd
+    - softflowctl
+  when: softflowd_enabled
+
+- name: Generate softflowd config
+  template:
+    src: "{{ item }}"
+    dest: "/etc/default/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - softflowd.j2
+  register: softflowd_cfg
+  when: softflowd_enabled
+
+- name: Generate softflowd.service
+  template:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - softflowd.service.j2
+  register: softflowd_srv
+  when: softflowd_enabled
+
+- name: Ensure softflowd is running and enabled as configured.
+  systemd:
+    name: softflowd.service
+    state: "{{ (softflowd_cfg | changed or softflowd_srv | changed) | ternary('restarted', 'started') }}"
+    daemon_reload: yes
+    enabled: yes
+  when: softflowd_enabled

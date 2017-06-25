@@ -1,0 +1,23 @@
+---
+netflow_cdn:
+  templatename: cdn-netflow
+  inputs:
+    udp:
+      - host: 192.168.101.202
+        port: "{{ softflowd.port }}"
+      - host: 192.168.101.107
+        port: "{{ softflowd.port }}"
+    tcp:
+      - host: 192.168.101.202
+        port: "{{ softflowd.port }}"
+      - host: 192.168.101.107
+        port: "{{ softflowd.port }}"
+  outputs:
+    - elasticsearch:
+        id: log
+        host:
+          - eslog-hk-eqx01-01-data:9200
+    - elasticsearch:
+        id: oi
+        host:
+          - esoi-hk-eqx01-01-data:9200

@@ -1,0 +1,18 @@
+---
+logstash_root: /build/logf/logstash
+nginx_root: /build/ngxc/ngx
+java:
+  home: /usr/lib/jvm/java-8-openjdk-amd64/jre
+cdn_log:
+  access_log:
+    outputs:
+      logstash:
+        host: 127.0.0.1
+        port: 20514
+        type: udp
+  error_log:
+    outputs:
+      logstash:
+        host: 127.0.0.1
+        port: 20515
+        type: udp

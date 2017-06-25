@@ -1,0 +1,169 @@
+#Ansible managed
+
+# pcre_jit                       on;
+worker_processes               auto;
+worker_cpu_affinity   auto 11111110;
+worker_rlimit_nofile         393216;
+worker_priority                  -2;
+# thread_pool             default threads=5 max_queue=65535;
+
+events {
+  worker_connections       102400;
+  worker_aio_requests         256;
+  use                       epoll;
+  multi_accept                 on;
+  accept_mutex                off;
+  accept_mutex_delay        500ms;
+}
+
+http {
+  include                      mime.types.h5bp;
+  default_type                 application/octet-stream;
+  charset_types  text/xml text/plain text/vnd.wap.wml application/x-javascript application/rss+xml text/css application/javascript application/json;
+
+  server_tokens                off;
+  server_name_in_redirect      off;
+  recursive_error_pages         on;
+  ignore_invalid_headers        on;
+  underscores_in_headers        on;
+
+  client_body_timeout          10s;
+  client_header_timeout        10s;
+  send_timeout                  2s;
+  reset_timedout_connection     on;
+
+  client_body_buffer_size     128k;
+  client_header_buffer_size     1k;
+  client_max_body_size          8m;
+  large_client_header_buffers 2 1k;
+
+  open_file_cache              max=10000 inactive=20s;
+  open_file_cache_valid        30s;
+  open_file_cache_min_uses       2;
+  open_file_cache_errors        on;
+
+#    aio                          threads=default;
+#    aio                     threads;
+  directio                      8m;
+  directio_alignment            4k;
+
+  sendfile                      on;
+  tcp_nopush                    on;
+  output_buffers            1  32k;
+  max_ranges                     1;
+
+  tcp_nodelay                   on;
+  keepalive_timeout            10s 5s;
+  keepalive_requests           512;
+
+  postpone_output             1400;	# postpone output unti a MTU is filled up
+
+#    dav_methods                  off;
+  merge_slashes                 on;
+
+  map            $request_uri        $_request_file_ext  { "~^/[^\?#]*\.(?<ext>[^\?#/\.]+)(?:$|[\?#])" $ext; }
+  #CVE-2015-1635, if it matches a string of 10 or more integers, remove it
+  map            $http_range         $_is_safe_range     { default 1; "~\d{10,}" 0; }
+
+  log_format logstash_json '{'
+    '"resource_id": "$_resource_id",'
+    '"remote_addr": "$remote_addr",'
+    '"server_addr": "$server_addr",'
+    '"scheme": "$scheme",'
+    '"host": "$host",'
+    '"time_local": "$time_local",'
+    '"request": "$request",'
+    '"status": "$status",'
+    '"bytes_sent": $bytes_sent,'
+    '"body_bytes_sent": $body_bytes_sent,'
+    '"request_time": $request_time,'
+    '"http_referer": "$http_referer",'
+    '"http_user_agent": "$http_user_agent",'
+    '"upstream_addr": "$upstream_addr",'
+    '"upstream_status": "$upstream_status",'
+    '"upstream_response_time": "$upstream_response_time",'
+    '"sent_http_content_type": "$sent_http_content_type",'
+    '"hostname": "$hostname",'
+    '"cdnhost": "{{ ansible_fqdn }}",'
+    '"file_ext": "$_request_file_ext",'
+    '"X-Cached-status": "$srcache_fetch_status-$srcache_store_status"'
+  '}';
+
+    access_log syslog:server=192.168.101.202:10514 logstash_json;
+    error_log syslog:server=192.168.101.202:10515 error;
+
+  more_set_headers 'Server: Allbrightnetwork CDN';
+  more_set_headers 'X-DNS-Prefetch-Control: on';
+    # more_set_headers 'Host: $hostname';
+
+  gzip             on;
+  gzip_comp_level  2;
+  gzip_min_length  256;
+  gzip_proxied     any;
+#    gzip_buffers 16 8k;
+#    gzip_vary on;
+  gzip_types
+    application/atom+xml
+    application/rdf+xml
+    application/rss+xml
+    application/javascript
+    application/json
+    application/ld+json
+    application/manifest+json
+    application/schema+json
+    application/vnd.geo+json
+    application/vnd.ms-fontobject
+    application/x-font-otf
+    application/x-font-ttf
+    application/x-javascript
+    application/x-web-app-manifest+json
+    application/xhtml+xml
+    application/font-woff
+    application/font-woff2
+    application/xml
+    font/opentype
+    image/bmp
+    image/svg+xml
+    image/vnd.microsoft.icon
+    image/x-icon
+    text/cache-manifest
+    text/css
+    text/javascript
+    text/plain
+    text/vcard
+    text/vnd.rim.location.xloc
+    text/vtt
+    text/x-component
+    text/x-cross-domain-policy
+    text/xml;
+#    ssi on;
+
+  server {
+    #listen 80 default_server backlog=65535 so_keepalive=on fastopen=30000 reuseport rcvbuf=2k sndbuf=64k deferred;
+    listen 80 default_server deferred reuseport backlog=65535 so_keepalive=on fastopen=30000;
+#        listen 443 ssl default_server deferred reuseport backlog=65535 so_keepalive=on fastopen=30000;
+    keepalive_timeout 0;
+    expires -1;
+    location = /nginx_status {
+        stub_status on;
+        access_log off;
+        allow 202.181.166.240/29;
+        allow 10.1.0.0/16;
+        allow 10.2.100.0/24;
+        allow 127.0.0.1;
+        deny all;
+    }
+    location / { return 444; }
+  }
+
+  server {
+    listen 8081;
+    location / { dyups_interface; }
+  }
+
+  include "modules/*.conf";
+  include "resources/*.conf";
+  include "resources/customers/*.conf";
+  # include "upstream/*.conf";
+  # include "customer/*.conf";
+}

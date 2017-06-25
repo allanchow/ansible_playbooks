@@ -1,0 +1,150 @@
+---
+- name: Generate SSL DH 4096
+  vars:
+    dhparam_length: 4096
+    dhparam_file: "{{ role_path }}/files/conf/{{ nginx.cert_root | basename }}/{{ ssl.dhparam }}"
+  local_action:
+    shell [ !-f {{ dhparam_file }} ] && openssl dhparam -outform pem -out {{ dhparam_file }} {{ dhparam_length }} || exit 0
+
+- name: Generate SSL Session key
+  vars:
+    random_length: 48
+    session_key_file: "{{ role_path }}/files/conf/{{ nginx.cert_root | basename }}/{{ ssl.session_key }}"
+  local_action:
+    shell [ !-f {{ session_key_file }} ] && openssl rand {{ random_length }} > {{ session_key_file }} || exit 0
+
+- name: TCP Fast Open
+  sysctl:
+    name: net.ipv4.tcp_fastopen
+    value: 3
+    sysctl_set: yes
+    reload: yes
+  register: tcp_fastopen_output
+  when: not container
+
+- name: Vars
+  set_fact: tcp_fastopen_enabled="{{ tcp_fastopen_output | succeeded }}"
+
+- name: Reset Dir
+  file: path="{{ nginx_root }}/{{ item.1.dest }}" state="{{ item.0 }}" mode="{{ item.1.mode }}"
+  with_nested:
+    - ["absent", "directory"]
+    - [
+        { dest: "conf/conf.d", mode: "0755" },
+        { dest: "modules", mode: "0755" },
+        { dest: "modules/lua", mode: "0755" }
+      ]
+
+- name: Nginx Dir Setup
+  file: path="{{ nginx_root }}/{{ item.dest }}" state="directory" mode={{ item.mode }}
+  with_items:
+    - { dest: logs, mode: "0755" }
+    - { dest: "conf/{{ nginx.cert_root | basename }}", mode: "0600" }
+
+- name: Add users
+  user:
+    name: "{{ nginx.user }}"
+    comment: Nginx Service User
+    createhome: no
+    shell: /usr/bin/nologin
+    state: present
+    system: yes
+
+- name: "Env | Add {{ nginx.user }} to group {{ memcached.user }}"
+  user: name="{{ nginx.user }}" groups="{{ memcached.user }}" append=yes
+
+    # - name: Env | Memcached | Dir Setup
+    #   file: path="{{ memcached.unix.socket_path }}" state="directory" mode=0755 owner="{{ memcached.user }}" group="{{ memcached.user }}"
+
+- apt:
+    name: bc
+    state: present
+    install_recommends: no
+
+- name: Deploy | Nginx Files
+  copy:
+    src: "{{ item }}"
+    dest: "{{ nginx_root }}/{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_flattened:
+    - "{{ ngx_binary }}"
+    - "{{ modules }}"
+    - "{{ lua_cmodules }}"
+
+- name: Deploy | Nginx Files
+  vars:
+    cert_root: "{{ nginx.cert_root | basename }}"
+    file_path: "{{ role_path }}/files"
+  copy:
+    src: "{{ item }}"
+    dest: "{{ nginx_root }}/{{ item | replace(file_path, '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_fileglob:
+    - conf/conf.d/*
+    - "conf/{{ cert_root }}/*"
+
+- name: Deploy | Generate Nginx Files
+  # vars:
+  #   cpucount: "{{ cpucount_out.stdout | default(2) }}"
+  #   worker_no: "{{ cpucount | int - 1 }}"
+  #   worker_affinity: "{{ '10' | lpad(cpucount | int, '1') }}"
+  template:
+    src: "{{ item }}"
+    dest: "{{ nginx_root }}/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    #- svc_nginx.j2
+    - conf/nginx.conf.j2
+    - conf/conf.d/no-default.j2
+    - conf/conf.d/lua_header.j2
+    - conf/conf.d/lua_init.j2
+    - conf/conf.d/lua_log.j2
+
+- name: Files | xttr
+  file:
+    path: "{{ nginx_root }}/{{ item }}"
+    mode: 0755
+  with_items:
+    - "{{ ngx_binary }}"
+#     - svc_nginx
+
+    # - name: Nginx | Test Conf
+    #   command: "{{ nginx_root }}/svc_nginx configtest"
+    #   register: ngx_result
+    #   failed_when: ngx_result | failed
+#
+# - name: Nginx | Replace
+#   shell: "./svc_nginx replace_with ./{{ ngx_binary }}"
+#   args:
+#     chdir: "{{ nginx_root }}"
+#     executable: /bin/bash
+
+- shell: mv /usr/local/nginx/nginx.1.12.0 /usr/local/nginx/nginx
+
+
+- name: Generate nginx.service
+  template:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - nginx.service.j2
+  register: nginx_srv
+
+- name: Ensure nginx is running and enabled as configured.
+  systemd:
+    name: nginx.service
+    state: "{{ (nginx_srv | changed) | ternary('restarted', 'started') }}"
+    daemon_reload: yes
+    enabled: yes

@@ -1,0 +1,7 @@
+  set $_resource_id {{ res_id }};
+  server_name {{ cdn_hostname }} {{ cname }};
+
+  etag                        on;
+  client_max_body_size      100m;
+  max_ranges                  50;
+  if ($_is_safe_range = 0)  { return 400; }

@@ -1,0 +1,38 @@
+---
+- name: Ensure /etc/modprobe.d
+  file: path=/etc/modprobe.d state=directory
+
+- name: Blacklist drivers when the root device is mounted
+  template:
+    src: blacklist-abn.conf.j2
+    dest: /etc/modprobe.d/blacklist-abn.conf
+    owner: root
+    group: root
+    mode:  0644
+
+# https://people.canonical.com/~ubuntu-security/cve/2017/CVE-2017-6074.html
+- name: CVE-2017-6074 - Blacklist the dccp ipv[46] autoloading aliases
+  blockinfile:
+    path: /etc/modprobe.d/blacklist-dccp.conf
+    create: yes
+    mode: 0644
+    owner: root
+    group: root
+    block: |
+      alias net-pf-2-proto-0-type-6 off
+      alias net-pf-2-proto-33-type-6 off
+      alias net-pf-10-proto-0-type-6 off
+      alias net-pf-10-proto-33-type-6 off
+  when: ansible_os_family == 'Debian'
+
+# https://access.redhat.com/security/cve/CVE-2017-6074
+- name: CVE-2017-6074 - Blacklist the dccp
+  blockinfile:
+    path: /etc/modprobe.d/blacklist-dccp.conf
+    create: yes
+    mode: 0644
+    owner: root
+    group: root
+    block: |
+      install dccp /bin/true
+  when: ansible_os_family == 'RedHat'

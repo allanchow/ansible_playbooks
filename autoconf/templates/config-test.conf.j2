@@ -1,0 +1,30 @@
+# {{ ansible_managed }}
+load_module modules/ngx_http_memc_module.so;
+load_module modules/ngx_http_set_misc_module.so;
+load_module modules/ngx_http_srcache_filter_module.so;
+pid nginx.pid;
+events {}
+http {
+  upstream memc_cluster {
+    server 10.255.255.1:11211 fail_timeout=2s;
+    keepalive 16;
+  }
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ""      close;
+  }
+  map $scheme $ssl_upstream {
+    default "";
+    "https" "_ssl";
+  }
+  #CVE-2015-1635, if it matches a string of 10 or more integers, remove it
+  map $http_range $_is_safe_range {
+    default    1;
+    "~\d{10,}" 0;
+  }
+  access_log off;
+  server {
+    server_name dummy.com;
+  }
+  include {{ nginx.customers_root }}/{{ res_id }}.conf;
+}

@@ -1,0 +1,4 @@
+#!/bin/bash
+
+/usr/local/memcached/bin/memcached -u devopsadmin -m {{ ansible_memtotal_mb }} -p 11211 -t {{ ansible_processor_vcpus }} -d -c 102400 -I 100m -C -b 4096 -l {{ ansible_ens224_1.ipv4.address }} -r
+

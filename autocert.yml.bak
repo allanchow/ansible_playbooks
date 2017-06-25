@@ -1,0 +1,77 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts:
+    - all_tb_cdn
+    - all_cdn
+  strategy: free
+  become: true
+  gather_facts: false
+  vars:
+    a_user: devopsadmin
+    ansible_ssh_pipelining: false
+    dehydrated_host: web-hk-eqx01-01
+  tasks:
+    - block:
+      - name: SSH | Ensure SSH keys don't already exist
+        stat:
+          path: ~/.ssh/id_rsa
+        register: ssh_key
+      - name: SSH | Generate SSH keys for passwordless SSH
+        command: ssh-keygen -N '' -t rsa -f ~/.ssh/id_rsa
+        when: ssh_key.stat.exists == False
+      - name: SSH | Get `id_rsa.pub`
+        command: cat ~/.ssh/id_rsa.pub
+        register: id_rsa_pub
+      delegate_to: "{{ dehydrated_host }}"
+      remote_user: "{{ a_user }}"
+      become: true
+      become_user: "{{ a_user }}"
+      run_once: true
+
+    - name: SSH | Add authorized key to all hosts
+      authorized_key:
+        user: "{{ a_user }}"
+        state: present
+        key: "{{ id_rsa_pub.stdout }}"
+      failed_when: id_rsa_pub.stdout is not defined
+
+    - name: Env | Dir Setup
+      file:
+        path: "/usr/local/nginx/conf/{{ item }}"
+        state: directory
+        mode: 0700
+      with_items:
+        - certs
+        - certs/000000_www_allbrightnet_com
+
+    - name: Cert | Deploy Let's Encrypt Certificate
+      synchronize:
+        src: /usr/local/share/dehydrated/certs/www.allbrightnet.com/
+        dest: /usr/local/nginx/conf/certs/000000_www_allbrightnet_com
+        archive: true
+        group: false
+        owner: false
+        links: false
+        perms: true
+        delete: true
+        copy_links: true
+        rsync_timeout: 5
+        rsync_opts:
+          - -m -W --ignore-times --safe-links
+          - --include='fullchain.pem' --include='privkey.pem' --include='chain.pem'
+          - --delete-excluded --exclude='*'
+          - --chmod=Du=rwx,Dg=,Do=,Fu=rw,Fg=,Fo=
+        set_remote_user: false
+      delegate_to: "{{ dehydrated_host }}"
+      remote_user: "{{ a_user }}"
+      become: true
+      become_user: "{{ a_user }}"
+      notify:
+        - ngx_reload
+
+  handlers:
+    - name: Nginx | Reload
+      command: /usr/local/nginx/nginx -s reload
+      register: ngx_result
+      failed_when: ngx_result|failed
+      listen: ngx_reload

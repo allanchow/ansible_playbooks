@@ -1,0 +1,40 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+input {
+  {% for input in access.inputs.udp | default([], True) %}
+  udp {
+    host => "{{ input.host }}"
+    port => {{ input.port }}
+    codec => "plain"
+    workers => 10
+    queue_size => 300000
+    buffer_size => 65535
+    # 25Mb, net.core.rmem_max
+    receive_buffer_bytes => 26214400
+    type => access_log
+  }
+  {% endfor %}
+  {% for input in access.inputs.tcp | default([], True) %}
+  tcp {
+    host => "{{ input.host }}"
+    port => {{ input.port }}
+    type => udp_monitor
+  }
+  {% endfor %}
+  {% for input in error.inputs.udp | default([], True) %}
+  udp {
+    host => "{{ input.host }}"
+    port => {{ input.port }}
+    codec => "plain"
+    type => error_log
+  }
+  {% endfor %}
+  {% for input in error.inputs.tcp | default([], True) %}
+  tcp {
+    host => "{{ input.host }}"
+    port => {{ input.port }}
+    type => udp_monitor
+  }
+  {% endfor %}
+}

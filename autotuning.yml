@@ -1,0 +1,24 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts:
+    - all_cdn
+    - all_tb_cdn
+  strategy: free
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Network | Get Default interface
+      shell: /sbin/ip route show | grep "^default" | sed 's|^.* dev \([^ \t]*\) .*$|\1|'
+      register: def_iface_out
+
+    - name: Network | Interface Tuning
+      vars:
+        iface: "{{ def_iface_out.stdout }}"
+      shell: "{{ item }}"
+      with_items:
+        - /sbin/ip route change $(/sbin/ip route show | grep "^default" | head -1) initcwnd 10 initrwnd 10
+        - "/sbin/ifconfig {{ iface }} txqueuelen 10000"
+        - "/sbin/ethtool --features {{ iface }} tso off gso off"
+
+    - name: Security | Ensure iptables are set
+      shell: (iptables -L INPUT | grep ACCEPT >/dev/null) && exit 0 || /usr/local/script/iptables_script.sh

@@ -1,0 +1,90 @@
+---
+- name: Remove Packages
+  apt:
+    name: "{{ item }}"
+    state: absent
+    purge: yes
+    autoremove: yes
+  with_items:
+    - laptop-detect
+    - acpid
+    - thermald
+
+- name: Install msr-tools
+  apt:
+    name: msr-tools
+    state: present
+    install_recommends: no
+
+- name: Blacklist affected cpu performance drivers
+  blockinfile:
+    path: /etc/modprobe.d/blacklist-abn_cpu_low_perf.conf
+    create: yes
+    mode: 0644
+    owner: root
+    group: root
+    block: |
+      blacklist intel_powerclamp
+      blacklist intel_rapl
+
+- name: Ensure /etc/default/grub.d
+  file: path="/etc/default/grub.d/" state="directory" mode=0755 owner=root group=root
+  when: not container
+
+- name: Update grub conf - high performance
+  blockinfile:
+    path: /etc/default/grub.d/01_highperf.cfg
+    create: yes
+    mode: 0755
+    owner: root
+    group: root
+    block: |
+      GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} {{ grub_high_performance_options | join(' ') }}"
+  notify: [ 'Update GRUB' ]
+  when: not container
+
+- name: Update grub conf - disable hyperthreading
+  blockinfile:
+    path: /etc/default/grub.d/02_no_hyperthreads.cfg
+    create: yes
+    mode: 0755
+    owner: root
+    group: root
+    block: |
+      GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX} maxcpus={{ (ansible_processor_cores | int) * (ansible_processor_count | int) }}"
+  notify: [ 'Update GRUB' ]
+  when: not container
+
+- name: Disable CPU ondemand frequency scaling
+  shell: update-rc.d ondemand disable && [ -d /sys/devices/system/cpu/cpu0/cpufreq ] && for CPUFREQ in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do [ -f $CPUFREQ ] || continue; echo -n performance > $CPUFREQ; done; exit 0
+  changed_when: False
+
+#
+# - name: Disable CPU frequency scaling services
+#   systemd:
+#    name: "{{ item }}"
+#    state: stopped
+#    enabled: false
+#   with_items:
+#    - thermald
+#   ignore_errors: true
+
+- name: Generate cpupower.service
+  template:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - cpupower.service.j2
+  when: not container
+
+- name: Ensure cpupower is running and enabled as configured.
+  systemd:
+    name: cpupower.service
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+  when: not container

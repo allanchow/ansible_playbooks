@@ -1,0 +1,65 @@
+{
+  "template": "{{ error.templatename }}-*",
+  "version": 50001,
+  "settings": {
+    "index.refresh_interval": "5s"
+  },
+  "mappings": {
+    "_default_": {
+      "_all": {
+        "enabled": true,
+        "norms": false
+      },
+      "dynamic_templates": [
+        {
+          "message_field": {
+            "path_match": "message",
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "text",
+              "norms": false
+            }
+          }
+        },
+        {
+          "string_fields": {
+            "match": "*",
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "text",
+              "norms": false,
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": {
+          "type": "date",
+          "include_in_all": false
+        },
+        "@version": {
+          "type": "keyword",
+          "include_in_all": false
+        },
+        "pid": { "type": "long" },
+        "timestamp": {
+          "type": "date",
+          "format": "dd'/'MMM'/'yyyy:HH:mm:ss Z||MMM  d HH:mm:ss||MMM dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+        },
+        "syslog_pri": { "type": "long" },
+        "ngx_errlog_timestamp": {
+          "type": "date",
+          "format": "yyyy'/'MM'/'dd HH:mm:ss||dd'/'MMM'/'yyyy:HH:mm:ss Z||MMM  d HH:mm:ss||MMM dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+        },
+        "ngx_pid": { "type": "long" },
+        "ngx_tid": { "type": "long" },
+        "ngx_cid": { "type": "long" }
+      }
+    }
+  }
+}

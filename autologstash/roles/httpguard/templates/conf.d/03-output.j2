@@ -1,0 +1,35 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+output {
+  # stdout {
+  #   codec => json
+  # }
+  if [type] == "httpguard" {
+    {% if httpguard.outputs is defined and httpguard.outputs.elasticsearch is defined %}
+    elasticsearch {
+      id => "es_{{ httpguard.templatename }}"
+      # IMPORTANT: exclude dedicated master nodes to prevent LS from sending bulk requests
+      hosts => [{{ httpguard.outputs.elasticsearch.host | map('wrap') | join (",") }}]
+      index => ["{{ httpguard.templatename }}-%{+YYYY.MM.dd}"]
+      codec => "plain"
+      action => "index"
+      doc_as_upsert => false
+      # must less than batch_size (default 500)
+#      flush_size => 500
+#      idle_flush_time => 10
+      pool_max => 2000
+      pool_max_per_route => 150
+      resurrect_delay => 5
+      timeout => 60
+      retry_initial_interval => 2
+      retry_max_interval => 60
+      retry_on_conflict => 1
+      template_name => "{{ httpguard.templatename }}"
+      template => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ httpguard.templatename }}.json"
+      template_overwrite => true
+      manage_template => true
+    }
+    {% endif %}
+  }
+}

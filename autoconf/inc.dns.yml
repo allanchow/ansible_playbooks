@@ -1,0 +1,29 @@
+---
+# xns will associate customer cname to all our cdn in default
+# xns return code: 1 - success; 0 - fail; -1 - exist
+# NOTE: ONLY update DNS for pending records
+- name: "DNS | Update State - {{ item.status }} Clients {{ item.resource_id }} {{ item.cname }}"
+  vars:
+    verb: "{{ { s_pending:'add_customer', s_deleting:'del_customer'}[item.status] }}"
+    cname_id: "{{ item.cname | regex_replace(cname_regex, '\\g<id>') }}"
+    uat_mode: "{{ item.cname | regex_replace(cname_regex, '\\g<prefix>') }}"
+  command: "{{ cmd_xns }} {{ verb }} {{ cname_id }} {{ uat_mode.startswith('uat-') | ternary('-uat', '') }} -j"
+  register: dns_result
+  run_once: True
+  delegate_to: localhost
+
+- set_fact:
+    resp_body: "{{ resp_body | difference(err_resp_body) | union(err_resp_body | map('combine',{'errors':dns_error_map[err_code|string]}, recursive=true) | list) }}"
+  vars:
+    err_resp_body: "{{ resp_body | selectattr('resource_id', 'equalto', item.resource_id) | list }}"
+    #dns_return: "{{ 0 if dns_result | failed else dns_result.stdout | from_json | json_query('result') }}"
+    #dns_return: "{{ dns_result | failed | ternary(0, dns_result.stdout | from_json | json_query('result') | int) }}"
+    dns_return: "{{ dns_result.stdout | from_json | json_query('result') | default(0) }}"
+    err_code: "{{ dns_return if dns_return | int in [0, 1,-1] else 0 }}"
+    dns_error_map:
+      '1': {}
+      '0': "{{ error_codes.E3001 }}"
+      '-1': "{{ error_codes.E3002 }}"
+  when: err_code != 1
+  run_once: True
+  delegate_to: localhost

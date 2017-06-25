@@ -1,0 +1,120 @@
+---
+- name: Reconfigue bash
+  command: dpkg-reconfigure bash
+  changed_when: False
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- include: update-kernel.yml
+  when: keneral_update_enabled and ansible_distribution=='Ubuntu'
+
+- name: Remove Packages
+  apt:
+    name: "{{ item }}"
+    state: absent
+    purge: yes
+    autoremove: yes
+  with_flattened:
+    - "*-dev"
+    - [popularity-contest, tasksel]
+    - memcached
+    - [nginx, apache]
+    - softflowd
+    - [postfix, mutt]
+    - [discover, discover-data]
+    - [lxcfs, lxd, lxc-common, lxd-client]
+    - [snapd, ubuntu-core-launcher, ubuntu-cloudimage-keyring]
+    - [vsftpd, bind9, dnsmasq-*, dns-root-data, ftp]
+    - [unattended-upgrades, update-manager-core, ubuntu-release-upgrader-core, keyboard-configuration]
+    - friendly-recovery
+    - at
+    - [network-manager, mtr-tiny, iputils-tracepath, isc-dhcp-client, isc-dhcp-common, vlan]
+    - lynx
+    - [samba, ntfs-3g, dosfstools]
+    - [cups*, gnome*, x11*, xauth, xkb-data, shared-mime-info, fontconfig-config, fonts-*, ttf-*, accountsservice]
+    - [vim-tiny, nano, ed, emacsen-common, whiptail]
+    - [manpages, manpages-dev, man-db, sgml-base, debian-faq*, doc-*, reportbug, info, install-info, installation-report, sosreport, apport, apport-*, groff-base]
+    - usbutils
+    - [ispell, aspell-en, iamerican, wamerican, wbritish, dictionaries, language-pack-*, iso-codes, language-selector-common, krb5-locales]
+    - whois
+    - zeroinstall-injector
+    - smclient
+    - [ppp, pppconfig]
+    - [pppoe, pppoeconf]
+    - pidentd
+    - [tcsh, tmux, byobu, ncurses-term]
+    - avahi-daemon
+    - bin86
+    - [console-common, console-data, console-tools]
+    - os-prober
+    - eject
+    - geoip-database
+    - software-properties-common
+    - [squashfs-tools, btrfs-tools, parted, gparted, fuse]
+    - pastebinit
+    - [git, git-man]
+    - [hwloc, ntpdate]
+    - [cryptsetup, cryptsetup-*]
+    - uidmap
+    - [plymouth, plymouth-*]
+    - powermgmt-base
+
+- name: Ensure Packages are installed
+  apt:
+    name: "{{ item }}"
+    state: present
+    install_recommends: no
+  with_flattened:
+    - build-essential
+    - uuid-runtime
+    - bcache-tools
+    - bc
+    - [mlocate, irqbalance, psmisc, time, udev]
+    - [htop, vnstat, hdparm, strace, ltrace, lsof]
+    - [wget, curl]
+    - [openssl, ca-certificates]
+    - vim
+    - rsync
+    - [screen, tree, ncdu]
+    - [tar, gzip, zip, bzip2]
+    - [grep, sed]
+    - [iftop, ifupdown, ifenslave, nload, iperf3, bmon, tcpdump, net-tools, ethtool, traceroute, telnet]
+    - lshw
+    - [python, python3-minimal]
+    - [snmp, snmpd, lm-sensors]
+    - [bsdutils, bsdmainutils]
+    - run-one
+    - zerofree
+    - logrotate
+
+# - name: Intial sensors detect
+#   shell: (while :; do echo ""; done ) | sensors-detect
+#   changed_when: False
+
+- name: Get CPU rdrand Capability
+  shell: grep -o rand /proc/cpuinfo | wc -l
+  register: rand_out
+  changed_when: False
+
+- name: Install rng-tools conditionally
+  apt:
+    name: rng-tools
+    state: "{{ (rand_out.stdout | int > 0) | ternary('present', 'absent') }}"
+    purge: yes
+    install_recommends: no
+
+- name: Install vm tools if a vm
+  apt:
+    name: open-vm-tools
+    state: present
+    purge: yes
+    autoremove: yes
+  when: ansible_virtualization_type == "VMware"
+
+- name: upgrade
+  apt:
+    autoremove: yes
+    upgrade: yes

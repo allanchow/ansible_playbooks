@@ -1,0 +1,50 @@
+---
+- set_fact:
+    scripts_net:
+      - "{{ (mode == 'prod') | ternary('iptables_script.sh.j2', 'firewall.sh.j2') }}"
+      - "{{ (softflowd is defined and mode == 'prod') | ternary('start_softflowd.sh.j2', '') }}"
+    scripts_heartbeat:
+      - "{{ (heartbeat is defined and mode == 'prod') | ternary('check_heartbeat.sh.j2', '') }}"
+    scripts_ntpdate:
+      - ntpdate -b -s stdtime.gov.hk
+
+
+- name: Deploy | Generate Autostart Scripts
+  template:
+    src: "{{ item }}"
+    dest: "{{ script_path }}/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0755
+    force: yes
+  with_items:
+    - "{{ scripts_net | unique | difference(['']) }}"
+    - "{{ scripts_heartbeat | unique | difference(['']) }}"
+
+
+- name: Deploy | Cron | ntpdate
+  become: true
+  cron:
+    name: ntpdate
+    minute: "0"
+    hour: "12"
+    job: "{{ scripts_ntpdate | first }}"
+
+- name: Deploy | rc.local
+  vars:
+    rc_scripts:
+      - "{{ scripts_ntpdate }}"
+      - [
+          "{{ (memcached.connection == 'tcp') | ternary('/sbin/ifconfig {{ iface }}:1 {{ memcached.tcp.cluster_ip }} netmask {{ memcached.tcp.cluster_netmask }}', '') }}"
+        ]
+      - "{{ scripts_net | unique | difference(['']) | map('regex_replace', '(.*)\\.j2', '%s/\\1' % script_path) | list }}"
+      - [
+          "cd {{ nginx_root }} && ./svc_nginx start"
+        ]
+      - "{{ scripts_heartbeat | unique | difference(['']) | map('regex_replace', '(.*)\\.j2', '%s/\\1' % script_path) | list }}"
+  template:
+    src: rc.local.j2
+    dest: /etc/rc.local
+    mode: 0755
+    owner: root
+    group: root

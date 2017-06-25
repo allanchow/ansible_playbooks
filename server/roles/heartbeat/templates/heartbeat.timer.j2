@@ -1,0 +1,16 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+[Unit]
+Description={{ service_name }}
+
+[Timer]
+OnCalendar=*-*-* *:*:0/30
+RandomizedDelaySec=0
+AccuracySec=1us
+RemainAfterElapse=off
+Persistent=false
+Unit=heartbeat.service
+
+[Install]
+WantedBy=timers.target

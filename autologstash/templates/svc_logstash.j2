@@ -1,0 +1,195 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#!/bin/bash
+# {{ ansible_managed }}
+
+# 2017-Apr, by Gnought
+#   applied to Logstash v5.3
+
+shopt -s expand_aliases extglob
+alias fn.begin='exec 3>&1 >/dev/tty'
+alias fn.end='exec >&3-'
+
+trap "exit 1" TERM
+
+MAIN_PID=$$
+LOGSTASH_BASEPATH="{{ logstash_root }}"
+LOGSTASH_FULLPATH="${LOGSTASH_BASEPATH}/bin/logstash"
+LOGSTASH_CONFIG_BASE="{{ logstash.conf_root }}"
+LOGSTASH_NODE_BASE="{{ logstash.nodes_root }}"
+JAVA_HOME={{ java.home }}
+RUNAS={{ logstash.user }}
+SUDO=''
+if (( $EUID != 0 )); then
+    SUDO='sudo'
+fi
+
+print_usage() {
+  exit 0
+}
+abort() {
+  echo "${1}. Abort ..."
+  kill -s TERM ${MAIN_PID}
+}
+logstash_is_running() {
+  local pid=$(logstash_pid)
+  [[ ${pid} == '' ]] && echo 0 || echo 1
+}
+logstash_pid() {
+  fn.begin
+  local pid=$(ps aux | grep java | grep '[l|L]ogstash' | grep ${NODE}$ | awk '{print $2}')
+  fn.end
+  echo ${pid}
+}
+# is_updated(){
+#   fn.begin
+#   local curr=${1}
+#   local new=${2}
+#   local md5_curr=$(openssl dgst -md5 ${curr} | cut -d'=' -f2)
+#   local md5_new=$(openssl dgst -md5 ${new} | cut -d'=' -f2)
+#   fn.end
+#   [[ ${md5_curr} == ${md5_new} ]] && echo 0 || echo 1
+# }
+_run_as() {
+  sudo -u "${RUNAS}" -s /bin/sh << EOF
+  ${@}
+EOF
+  return $?
+}
+_run_logstash() {
+  sudo -u "${RUNAS}" -s /bin/sh << EOF
+  cd ${LOGSTASH_BASEPATH} && LS_JVM_OPTS=${LS_JVM_OPTS} JAVA_HOME=${JAVA_HOME} exec ${LOGSTASH_FULLPATH} "--path.settings" ${LOGSTASH_NODE_BASE}/${NODE} ${EXTRA_ARGS} ${@}
+EOF
+  return $?
+}
+_run_logstash_detached() {
+  # completely detached from terminal
+  _run_logstash ${@} '</dev/null >/dev/null 2>&1 &'
+}
+_signal_logstash(){
+  local signal=${1}
+  local pid=${2}
+  _run_as /bin/kill -s ${signal} ${pid}
+}
+_stop_logstash() {
+  local pid=${1}
+  _signal_logstash TERM ${pid}
+  while [ $(ps --no-headers -o pid --pid=${pid} | wc -w) -gt 0 ]; do
+    echo "[$(date)]: Wait for Logstash to quit ..."
+    sleep 1
+  done
+}
+_update_pkg(){
+  fn.begin
+  local prefix=${1}
+  local fn_up=${2}
+  local pkgnew=${prefix}.$(date +%s)
+  pushd ${LOGSTASH_CONFIG_BASE}
+  local pkg=$(find . -type f -name "${prefix}.*" | sort | head -n 1 | xargs basename 2>/dev/null)
+  ${fn_up} ${pkgnew}
+  if [[ ! -z ${pkg} ]]; then
+    __is_updated() {
+      fn.begin
+      local curr=${1}
+      local new=${2}
+      local md5_curr=$(openssl dgst -md5 ${curr} | cut -d'=' -f2 2>/dev/null)
+      local md5_new=$(openssl dgst -md5 ${new} | cut -d'=' -f2 2>/dev/null)
+      fn.end
+      [[ ${md5_curr} == ${md5_new} ]] && echo 0 || echo 1
+    }
+    if [[ $(__is_updated "${pkg}" "${pkgnew}") -eq 1 ]]; then
+      ${SUDO} rm -f ${pkg}
+    else
+      ${SUDO} rm -f ${pkgnew}
+      pkgnew=${pkg}
+    fi
+  fi
+  popd
+  fn.end
+  echo ${pkgnew}
+}
+main() {
+  local CMD=${1:-help}; shift;
+  local NODE=${1}; shift;
+  node_chk() {
+    [[ "${NODE}x" == "x" ]] && abort "Please specify a node"
+    [[ ! -d "${LOGSTASH_NODE_BASE}/${NODE}" ]] && abort "node does not exist"
+  }
+  CMD=${CMD,,}
+  case ${CMD} in
+    update-geo)
+      fn() { ${SUDO} sh -c "curl -s http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz | gunzip -c > $1"; }
+      local GEO=GeoLite2-City.mmdb
+      pkg=$(_update_pkg ${GEO} fn)
+      ${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${GEO}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
+    ;;
+    update-ua)
+      fn() { ${SUDO} sh -c "curl -s https://raw.githubusercontent.com/ua-parser/uap-core/master/regexes.yaml > $1"; }
+      local UA=ua_regexes.yaml
+      pkg=$(_update_pkg ${UA} fn)
+      ${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${UA}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
+    ;;
+    update-all-plugins)
+      local lcmd=bin/logstash-plugin
+      cd ${LOGSTASH_BASEPATH}
+      for plugin in $(${lcmd} list | grep -v logstash-patterns-core); do sh -c "${SUDO} JAVA_HOME=${JAVA_HOME} ${lcmd} update ${plugin}"; done
+    ;;
+    configtest)
+      node_chk
+      LS_JVM_OPTS=${LOGSTASH_CONFIG_BASE}/jvm.options
+      _run_logstash --config.test_and_exit
+    ;;
+    start|start-fg)
+      node_chk
+      if [ $(logstash_is_running) -eq 1 ]; then
+        abort "Logstash is already running"
+      fi
+      local opt=${CMD#start-}
+      local debug=$([[ ${opt} == 'debug' ]] && echo '-v --debug --verbose' || echo '')
+      echo "Start Logstash"
+      [[ ${opt} == 'fg' ]] && _run_logstash ${debug} || _run_logstash_detached  ${debug}
+    ;;
+    stop)
+      node_chk
+      if [ $(logstash_is_running) -eq 0 ]; then
+        abort "Logstash is not running"
+      fi
+      _stop_logstash $(logstash_pid)
+      echo "Stop Logstash"
+    ;;
+    reload)
+      node_chk
+      if [ $(logstash_is_running) -eq 0 ]; then
+        abort "Logstash is not running"
+      fi
+      cat << EOF
+Logstash v5.3 cannot reload config, reported in https://github.com/elastic/logstash/issues/6417
+The workaround is enable the "config.reload.automatic" and set a large "config.reload.internval" value.
+EOF
+      _signal_logstash HUP $(logstash_pid)
+    ;;
+    restart)
+      node_chk
+      read -p "This will generate a downtime. Are you sure [Y/n]? " -n 1 -r response
+      echo    # (optional) move to a new line
+      if [[ ! $response =~ ^[Yy]$ ]]; then abort; fi
+      local pid=$(logstash_pid)
+      if [ $(logstash_is_running) -eq 1 ]; then
+        ${0} stop ${NODE}
+      fi
+      ${0} start ${NODE}
+    ;;
+    status)
+      node_chk
+      if [ $(logstash_is_running) -eq 0 ]; then
+        abort "Logstash is not running"
+      fi
+      local pid=$(logstash_pid)
+      echo "Logstash [${pid}] is running"
+    ;;
+    help|*)
+      print_usage
+    ;;
+  esac
+}
+
+main $*

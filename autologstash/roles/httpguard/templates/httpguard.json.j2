@@ -1,0 +1,88 @@
+{
+  "template": "{{ httpguard.templatename }}-*",
+  "version": 50001,
+  "settings": {
+    "index.refresh_interval": "5s"
+  },
+  "mappings": {
+    "_default_": {
+      "_all": {
+        "enabled": true,
+        "norms": false
+      },
+      "dynamic_templates": [
+        {
+          "message_field": {
+            "path_match": "message",
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "text",
+              "norms": false
+            }
+          }
+        },
+        {
+          "string_fields": {
+            "match": "*",
+            "match_mapping_type": "string",
+            "mapping": {
+              "type": "text",
+              "norms": false,
+              "fields": {
+                "keyword": {
+                  "type": "keyword"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": {
+          "type": "date",
+          "include_in_all": false
+        },
+        "@version": {
+          "type": "keyword",
+          "include_in_all": false
+        },
+        "time_local": {
+          "type": "date",
+          "format": "dd'/'MMM'/'yyyy:HH:mm:ss Z||MMM  d HH:mm:ss||MMM dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+        },
+        "time_iso8601": {
+          "type": "date",
+          "format": "dd'/'MMM'/'yyyy:HH:mm:ss Z||MMM  d HH:mm:ss||MMM dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+        },
+        "request_at_ms": {
+          "type": "date",
+          "format": "dd'/'MMM'/'yyyy:HH:mm:ss Z||MMM  d HH:mm:ss||MMM dd HH:mm:ss||strict_date_optional_time||epoch_millis"
+        },
+        "resource_id": { "type": "integer" },
+        "req": {
+          "dynamic": true,
+          "properties": {
+            "client_ip": { "type": "ip" },
+            "client_port": { "type": "integer"}
+          }
+        },
+        "vhost": {
+          "dynamic": true,
+          "properties": {
+            "addr": { "type": "ip" },
+            "port": { "type": "integer"}
+          }
+        },
+        "geoip": {
+          "dynamic": true,
+          "properties": {
+            "ip": { "type": "ip" },
+            "location": { "type": "geo_point" },
+            "latitude": { "type": "half_float" },
+            "longitude": { "type": "half_float" }
+          }
+        }
+      }
+    }
+  }
+}

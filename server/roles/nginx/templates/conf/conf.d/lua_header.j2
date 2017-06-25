@@ -1,0 +1,7 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+-- {{ ansible_managed }}
+
+ngx.header["Server"] = "Allbrightnetwork CDN"
+if ngx.status == ngx.HTTP_OK then
+  ngx.header["X-DNS-Prefetch-Control"] = "on"
+end

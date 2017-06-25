@@ -1,0 +1,23 @@
+---
+netflow:
+  templatename: netflow
+  inputs:
+    udp:
+      - host: 192.168.101.202
+        port: 9995
+      - host: 192.168.101.107
+        port: 9995
+    tcp:
+      - host: 192.168.101.202
+        port: 9995
+      - host: 192.168.101.107
+        port: 9995
+  outputs:
+    - elasticsearch:
+        id: log
+        host:
+          - eslog-hk-eqx01-01-data:9200
+    - elasticsearch:
+        id: oi
+        host:
+          - esoi-hk-eqx01-01-data:9200

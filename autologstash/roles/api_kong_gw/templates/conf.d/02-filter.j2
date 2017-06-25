@@ -1,0 +1,16 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+filter {
+  if [type] == "udp_monitor"             { drop {} }
+  if [type] == "api_kong_gw" {
+    # Force to encode message to utf-8 before json parsing
+    ruby {
+      code => "event.set('message', event.get('message').dup.force_encoding(Encoding::UTF_8))"
+    }
+    json {
+      source => "message"
+      remove_field => ["message"]
+    }
+  }
+}

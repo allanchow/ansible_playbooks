@@ -1,0 +1,9 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+IFACE={{ iface }}
+NETFLOW_VER=5
+SAMPLING_RATE=1
+DEST={{ softflowd.ip }}:{{ softflowd.port }}
+FLOW_TRACK_LVL=full
+MAXFLOW=16384

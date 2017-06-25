@@ -1,0 +1,10 @@
+---
+- name: Ensure locales is installed
+  apt:
+    name: locales
+    state: present
+    install_recommends: no
+
+- name: Locale - en_HK.UTF-8
+  command: locale-gen "en_HK.UTF-8"
+  changed_when: False

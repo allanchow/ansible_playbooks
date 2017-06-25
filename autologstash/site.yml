@@ -1,0 +1,111 @@
+#!/usr/bin/env ansible-playbook
+# logstash-hk-eqx01-01
+---
+- hosts:
+#logstash-hk-eqx01-02
+    - all_tb_logstash
+  any_errors_fatal: true
+  serial: 1
+  become: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Env | Avoiding JVM Delays Caused by Random Number Generation
+    # https://docs.oracle.com/cd/E13209_01/wlcp/wlss30/configwlss/jvmrand.html
+      command: timeout 5 head -n 1 /dev/random
+      ignore_errors: yes
+      register: jvm_urandom
+
+    - block:
+      - name: Env | Java - Set to use /dev/urandom
+        lineinfile:
+          dest: "{{ java.home }}/lib/security/java.security"
+          regexp: 'securerandom.source='
+          line: 'securerandom.source=file:/dev/urandom'
+          state: present
+      - name: Env | Java - Set to use NativePRNGNonBlocking
+        lineinfile:
+          dest: "{{ java.home }}/lib/security/java.security"
+          regexp: 'securerandom.strongAlgorithms='
+          line: 'securerandom.strongAlgorithms=NativePRNGNonBlocking:SUN'
+          state: present
+      when: jvm_urandom | failed
+
+    # - name: Env | CPU support rdrand
+    #   shell: cat /proc/cpuinfo | grep rdrand > /dev/null && echo 1 || echo 0
+    #   register: rdrand_support
+    # - name: Env | Sys - Install rng-tools to use TRNG
+    #   apt: name=rng-tools state=present install_recommends=no
+    #   when: rdrang_support | succeeded
+    # - name: Env | Sys - Start rng-tools
+    #   service: name=rng-tools state=started
+    #   when: rdrang_support | succeeded
+
+    - name: Env | Sys - Get System Max Entropy Size
+      shell: cat /proc/sys/kernel/random/poolsize
+      register: entropy_poolsize
+
+    - name: Env | Sys - Get Current System Available Entropy
+      shell: cat /proc/sys/kernel/random/entropy_avail
+      register: avail_entropy
+
+    - name: Env | Sys - Ensure Enough Entropy
+      vars:
+        ae: "{{ avail_entropy.stdout }}"
+        pool: "{{ entropy_poolsize.stdout }}"
+      fail: msg='insufficient/invalid entropy'
+      when: ae | int < 1000 and ae | int > pool | int
+
+    - name: Env | Logstash - Add user
+      user:
+        name: "{{ logstash.user }}"
+        comment: LogStash Service User
+        createhome: no
+        shell: /usr/bin/nologin
+        state: present
+        system: yes
+
+    - name: Deploy | Logstash - Generate Files
+      template:
+        src: "{{ item }}"
+        dest: "{{ logstash_root }}/{{ item | replace('.j2', '') }}"
+        owner: root
+        group: root
+        mode: 0755
+      with_items:
+        - svc_logstash.j2
+
+    - name: Env | Logstash - Folder Permission
+      file:
+        path: "{{ logstash_root }}/{{ item }}"
+        owner: "{{ logstash.user }}"
+        group: "{{ logstash.user }}"
+        recurse: yes
+        mode: 0755
+      with_items:
+        - data
+
+  roles:
+#    - cdn_log
+#    - netflow
+#    - netflow_cdn
+     #- network
+  #  - api_kong_gw
+#    - packetbeat
+    - httpguard
+
+  tasks:
+    - name: Deploy | Logstash Actions
+      shell: "./svc_logstash {{ item }}"
+      args:
+        chdir: "{{ logstash_root }}"
+        executable: /bin/bash
+      with_items:
+        - update-geo
+        - update-ua
+#        - reload cdn_log
+#        - reload netflow
+#        - reload netflow_cdn
+#         - reload network
+    #    - reload api_kong_gw
+#        - reload packetbeat

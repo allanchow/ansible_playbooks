@@ -1,0 +1,63 @@
+
+  location = /memc {
+    internal;
+    memc_connect_timeout 100ms;
+    memc_send_timeout    100ms;
+    memc_read_timeout    100ms;
+    set                  $memc_key $query_string;
+    set                  $memc_exptime {{ cache_exp_sec }};
+    memc_pass            memc_cluster;
+  }
+  location ~* \.(?:{{ file_type | join("|") }})$ {
+    # srcache-nginx-module
+    set_escape_uri   $escaped_request_uri "ngx_{{ host_header }}$request_uri$args$http_range";
+    set              $key $escaped_request_uri;
+    srcache_fetch                   GET /memc $key;
+    srcache_store                   PUT /memc $key;
+    srcache_store_statuses          200 301 302;
+    srcache_store_ranges            on;
+    srcache_store_max_size          {{ memcached.max_slab_page }};       # should match to memcached -I settings
+    srcache_methods                 GET HEAD;
+    srcache_request_cache_control   off;
+    srcache_response_cache_control  on;
+    srcache_store_no_store          off;
+    srcache_store_no_cache          off;
+    srcache_store_private           off;
+    srcache_default_expire          {{ cache_exp_sec }}s;
+
+    add_header X-Cached-status $srcache_fetch_status-$srcache_store_status;
+
+#    add_header Access-Control-Allow-Origin *;
+#    add_header Timing-Allow-Origin *;
+
+# localized proxy_set_header will override all global proxy_set_header directives
+    proxy_set_header   Host {{ host_header }};
+    proxy_set_header   Accept-Encoding "";
+
+    # Reverse proxy settings
+    proxy_redirect off;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Ssl   $https;
+
+    proxy_http_version                1.1;
+    proxy_set_header        Connection "";
+
+    # proxy_redirect     http:// https://;
+    proxy_pass           $scheme://{{ upstream_target }};
+    proxy_next_upstream  http_429 http_500 http_502 http_503 http_504 error timeout invalid_header non_idempotent;
+      # the total next upstream chain timeout:
+    # the value >= the number of upstream target / proxy_connect_timeout
+    proxy_next_upstream_timeout       60s;
+
+    proxy_connect_timeout              5s;
+    proxy_send_timeout                 5m;
+    proxy_read_timeout                 5m;
+
+    proxy_buffering                    on;
+    proxy_buffers                  512 4k;
+    proxy_buffer_size                  4k;
+    proxy_busy_buffers_size           16k;
+    proxy_max_temp_file_size            0;
+  }

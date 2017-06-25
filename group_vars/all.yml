@@ -1,0 +1,90 @@
+---
+base_root: /usr/local
+logstash_root: "{{ base_root }}/logstash"
+logstash:
+  user:           logstash
+  conf_root:      "{{ logstash_root }}/config"
+  nodes_root:     "{{ logstash_root }}/nodes"
+  vip:
+    prod: 27.111.185.128
+    dev: 27.111.185.135
+nginx_root: "{{ base_root }}/nginx"
+nginx:
+  # 25M
+  udp_buffer_size: 26214400
+  tcp_keepalive_pool: 200
+  user:            nginx
+  sbin_root:      "{{ nginx_root }}"
+  conf_root:      "{{ nginx_root }}/conf"
+  resource_root:  "{{ nginx_root }}/conf/resources"
+  customers_root: "{{ nginx_root }}/conf/resources/customers"
+  cert_root:      "{{ nginx_root }}/conf/xnfjr"
+java:
+  home: "{{ base_root }}/jdk/jre"
+ipv4:
+  hko_gw:
+    - off1.allbrightnet.com
+    - 59.149.245.236/30
+  udomain:
+    - 202.181.166.240/29
+  hk_eqx01:
+    - 27.111.185.128/28
+    - 27.111.174.56/30
+  private:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  iana_reserved:
+    # Historical Broadcast
+    - 0.0.0.0/8
+    # Loopback
+    - 127.0.0.0/8
+    # Link Local Networks
+    - 169.254.0.0/16
+    # TEST-NET
+    - 192.0.2.0/24
+    # Class E Reserved
+    - 240.0.0.0/5
+    # Unallocated
+    - 248.0.0.0/5
+    # Broadcast
+    - 255.255.255.255/32
+const:
+  port:
+    ssh: 22
+    snmp: 161
+    http: 80
+    https: 443
+    domain: 53
+    ntp: 123
+    nrpe: 5666
+#cdn_suffix: .allbrightnetwork.com
+softflowd:
+  path: "{{ base_root }}/softflowd"
+  ip: "{{ logstash.vip.prod }}"
+  port: 9996
+heartbeat:
+  outputs:
+    direct:
+      host: "{{ logstash.vip.prod }}"
+      port: 10518
+      proto: udp
+    proxy:
+      - host: "uat-cdn-g1-jp-01"
+        port: 10518
+        proto: udp
+memcached:
+  user: memcached
+#  path: "{{ base_root }}/memcached"
+  max_slab_page: 100m
+  maxconn: 102400
+  backlog_queue_limit: 4096
+  connection: unix
+  tcp:
+    cluster_ip: 10.255.255.1
+    cluster_net: 10.255.255.0
+    cluster_netmask: 255.255.255.0
+    cluster_port: 11211
+  unix:
+    socket_path: "/var/run/memcached"
+    socket: "/var/run/memcached/memcached.sock"

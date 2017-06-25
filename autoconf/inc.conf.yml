@@ -1,0 +1,51 @@
+---
+- block:
+  - name: Conf | Create SSL Dir Layout for {{ res_id }}
+    file: path="{{ nginx.cert_root }}/{{ res_id }}" state=directory mode=0700
+
+  - name: Conf | Create SSL public certs for {{ res_id }}
+    blockinfile:
+        dest: "{{ nginx.cert_root }}/{{ res_id }}/{{ cert_pem_name }}"
+        block: "{{ item.ssl_cert }}"
+        create: yes
+        marker: ""
+
+  - name: Conf | Create SSL private key for {{ res_id }}
+    blockinfile:
+        dest: "{{ nginx.cert_root }}/{{ res_id }}/{{ key_pem_name }}"
+        block: "{{ item.ssl_key }}"
+        create: yes
+        marker: ""
+  when: ssl_enabled | bool == True
+
+- name: Conf | Create {{ res_id }}.conf - <<{{ status }}>> Clients {{ cname }}"
+  template:
+    src: "{{ inner_item.0 }}"
+    dest: "{{ inner_item.1 }}"
+    force: True
+    mode: 0644
+  with_together:
+    - [tpl_resources.j2, config-test.conf.j2]
+    - ["{{ nginx.customers_root }}/{{ res_id }}.conf", "{{ nginx_root }}/conf/config-test.conf"]
+  loop_control:
+    loop_var: inner_item
+
+- name: Conf | Validation {{ res_id }}.conf
+  command: "{{ root }}/nginx -p {{ root }} -c {{ nginx_root }}/conf/config-test.conf -t"
+  become: true
+  register: conf_result
+  ignore_errors: true
+
+- block:
+  - name: Conf | Remove {{ res_id }}.conf if invalid
+    set_fact:
+      ngx_invalid_cuslist: "{{ ngx_invalid_cuslist | default([]) + [item] }}"
+  - file:
+      path: "{{ inner_item }}"
+      state: absent
+    with_items:
+      - "{{ nginx.customers_root }}/{{ res_id }}.conf"
+      - "{{ nginx.cert_root }}/{{ res_id }}"
+    loop_control:
+      loop_var: inner_item
+  when: conf_result | failed and dryrun | bool == False

@@ -1,0 +1,61 @@
+---
+- name: Install related components
+  apt:
+    name: "{{ item }}"
+    state: present
+    install_recommends: no
+  with_items:
+    - dnsutils
+    - resolvconf
+
+- name: Ensure resolvconf is running and enabled as configured.
+  systemd:
+    name: resolvconf
+    state: started
+    enabled: true
+
+- name: Remove ifup program to push DNS to resolvconf
+  replace:
+    path: /etc/network/interfaces
+    regexp: '(?<!#)dns-(nameservers|search|sortlist) '
+    replace: '#dns-\1 '
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Ensure /etc/resolvconf/resolv.conf.d/
+  file: path=/etc/resolvconf/resolv.conf.d state=directory
+
+- name: Reset resolvconf base
+  copy:
+    dest: /etc/resolvconf/resolv.conf.d/base
+    content: ''
+    force: yes
+  notify:
+    - regenerate resolv.conf
+
+- name: Set resolvconf original
+  copy:
+    src: original
+    dest: /etc/resolvconf/resolv.conf.d/original
+    force: yes
+  notify:
+    - regenerate resolv.conf
+
+- name: Link resolvconf original to tail
+  file:
+    src: /etc/resolvconf/resolv.conf.d/original
+    dest: /etc/resolvconf/resolv.conf.d/tail
+    force: yes
+    state: link
+  notify:
+    - regenerate resolv.conf
+
+- name: Link /etc/resolv.conf to /run/resolvconf/resolv.conf
+  file:
+    src: /run/resolvconf/resolv.conf
+    dest: /etc/resolv.conf
+    force: yes
+    state: link
+  notify:
+    - regenerate resolv.conf

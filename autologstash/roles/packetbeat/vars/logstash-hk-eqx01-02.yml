@@ -1,0 +1,19 @@
+---
+packetbeat:
+  templatename: packetbeat
+  inputs:
+    udp:
+      - host: 192.168.101.202
+        port: 20517
+      - host: 192.168.101.108
+        port: 20517
+    tcp:
+      - host: 192.168.101.202
+        port: 20517
+      - host: 192.168.101.108
+        port: 20517
+  outputs:
+    - elasticsearch:
+        id: log
+        host:
+          - eslog-hk-eqx01-01-data:9200

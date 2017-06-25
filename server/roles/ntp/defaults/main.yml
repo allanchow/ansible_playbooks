@@ -1,0 +1,19 @@
+---
+ntp_enabled: True
+ntp_timezone: Asia/Hong_Kong
+
+ntp_manage_config: True
+
+# NTP server area configuration (leave empty for 'Worldwide').
+# See: http://support.ntp.org/bin/view/Servers/NTPPoolServers
+ntp_area: ''
+ntp_servers:
+  - stdtime.gov.hk
+  - "0{{ ntp_area }}.pool.ntp.org iburst"
+  - "1{{ ntp_area }}.pool.ntp.org iburst"
+  - "2{{ ntp_area }}.pool.ntp.org iburst"
+  - "3{{ ntp_area }}.pool.ntp.org iburst"
+
+# Enable local clock when disconnected from the internet
+# See: http://en.linuxreviews.org/NTP_-_Howto_make_the_clock_show_the_correct_time#What_the_fudge.3F
+ntp_enable_local_clock: False

@@ -1,0 +1,18 @@
+---
+- name: Clear rc.local
+  copy:
+    src: rc.local
+    dest: /etc/rc.local
+    force: yes
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Ensure rc.local is not running and disabled as configured.
+  systemd:
+    name: rc.local
+    state: "{{ item }}"
+    enabled: no
+  with_items:
+    - restarted
+    - stopped

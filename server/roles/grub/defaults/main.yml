@@ -1,0 +1,45 @@
+---
+# hugepage: 2
+# hugepage_pagesize_1G: 1G
+
+grub_enabled: not container
+
+# Kernel options.
+grub_kernel_options:
+  - quiet
+  - nomodeset
+  - highres=on
+  - erst_disable bert_disable
+  - nohibernate
+# IO [[[
+  - dm_mod.use_blk_mq=y
+  - scsi_mod.use_blk_mq=y
+  - rootflags=data=writeback,journal_checksum,journal_async_commit,commit=10
+  - "{{ physical_host | ternary('elevator=deadline', 'elevator=noop') }}"
+# ]]]
+# HugePage [[[
+#  - default_hugepagesz={{ hugepage_pagesize_1G }} hugepagesz={{ hugepage_pagesize_1G }} hugepages={{ hugepage }}
+# ]]]
+
+# By default the first GRUB menu option is active and it will be booted. If you
+# specify youcat r own parameter, it will be used instead.
+grub_default: ""
+
+# GRUB timeout for hardware-based devices.
+grub_timeout_hardware: 5
+
+# GRUB timeout for virtual devices.
+grub_timeout_virtual: 1
+
+# Additional GRUB options specified as a YAML text block.
+grub_custom_options: ""
+
+# Enable serial console (in both grub and kernel)
+grub_serial_console: False
+
+# Serial port to enable console on (eg. ttyS0 => 0, ttyS1 => 1)
+grub_serial_console_unit: 0
+
+# Speed of the serial port.
+# Other parameters (8 bits, no parity, 1 stop bit are hardcoded)
+grub_serial_console_speed: 115200

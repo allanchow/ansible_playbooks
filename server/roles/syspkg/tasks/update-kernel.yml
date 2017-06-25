@@ -1,0 +1,88 @@
+---
+# https://wiki.ubuntu.com/Kernel/LTSEnablementStack
+- name: Install Ubuntu LTS Enablement Stacks
+  set_fact:
+    hwe_prefix: "{{ hwe_enabled | ternary('-hwe-%s' % ansible_distribution_version, '') }}"
+    kernel_type: "{{ (container or vm) | ternary('virtual', 'generic') }}"
+  when: not container
+
+- name: Install appropriate kernel
+  apt:
+    name: "{{ item }}"
+    install_recommends: yes
+  register: ubuntu_kernel
+  with_items:
+    - "linux-{{ kernel_type }}{{ hwe_prefix }}"
+    - "linux-tools-{{ kernel_type }}{{ hwe_prefix }}"
+  when: not container
+
+- name: Minimify Linux installation if it is a virtual server
+  apt:
+    name: "{{ item }}"
+    autoremove: yes
+    purge: yes
+    state: absent
+  register: ubuntu_minify
+  with_items:
+    - linux-image-extra*
+    - linux-firmware
+  when: vm
+
+- name: Cleanup non-hwe kernel images
+  apt:
+    name: "{{ item }}"
+    autoremove: yes
+    purge: yes
+    state: absent
+  register: ubuntu_minify
+  with_items:
+    - linux-{{ kernel_type }}
+    - linux-tools-{{ kernel_type }}
+  when: hwe_enabled and not container
+
+- name: upgrade
+  apt:
+    autoremove: yes
+    upgrade: dist
+
+- name: Install grub components
+  apt:
+    name: "{{ item }}"
+    state: "{{ container | ternary('absent', 'present') }}"
+    install_recommends: no
+  with_items:
+    - grub2-common
+
+- name: Update GRUB
+  command: update-grub
+  changed_when: False
+  failed_when: ('error' in grub_register_update.stderr)
+  register: grub_register_update
+  when: not container and (ubuntu_kernel | changed or ubuntu_minify | changed)
+
+- name: Reboot
+  shell: sleep 2 && shutdown -r now "Ansible reboot"
+  async: 1
+  poll: 0
+  ignore_errors: true
+  when: not container and (ubuntu_kernel | changed)
+
+- name: Wait for server to come back
+  local_action: wait_for
+  args:
+    host: "{{ inventory_hostname_short }}"
+    port: 22
+    state: started
+    delay: 30
+    timeout: 300
+  when: not container and (ubuntu_kernel | changed)
+
+- name: Remove old kernel images
+  shell: for i in $(dpkg -l | cut -d' ' -f3 | tail -n +6 | grep -E 'linux-image-[0-9]+' | grep -Fv $(uname -r)); do apt -y purge $i; done;
+  changed_when: False
+  when: not container
+
+- name: Remove old kernel headers
+  shell: for i in $(dpkg -l | cut -d' ' -f3 | tail -n +6 | grep -E 'linux-headers-[0-9]+' | grep -Fv $(uname -r | tr -d '[a-z]' | sed 's/-$//')); do apt -y purge $i; done;
+  changed_when: False
+  when: not container

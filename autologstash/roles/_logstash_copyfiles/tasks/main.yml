@@ -1,0 +1,12 @@
+---
+- name: Deploy | [{{ logstash_nodename }}] - Create Dir if necessary
+  file: path="{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item | dirname }}" state="directory" mode=0755
+
+- name: Deploy | [{{ logstash_nodename }}] - Copy Logstash Node Config
+  copy:
+    src: "{{ item }}"
+    dest: "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes

@@ -1,0 +1,25 @@
+---
+- name: Ensure iptables persent
+  apt:
+    name: iptables
+    state: present
+    install_recommends: no
+
+- name: Generate iptables-rules.servie
+  template:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - iptables-rules.service.j2
+    - firewall.sh.j2
+
+- name: Ensure iptables-rules.service is running and enabled as configured.
+  systemd:
+    name: iptables-rules
+    state: restarted
+    daemon_reload: yes
+    enabled: yes

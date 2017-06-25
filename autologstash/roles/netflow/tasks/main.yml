@@ -1,0 +1,33 @@
+---
+- set_fact: logstash_nodename={{ role_path | basename }}
+- include_role:
+    name: _predeploy
+- include_role:
+    name: _logstash_prerequisite
+  with_items:
+    - logstash-codec-netflow
+- include_role:
+    name: _logstash_copyfiles
+  with_items:
+    - conf.d/netflow/proto.yml
+    - conf.d/netflow/src_dst_port.yml
+    - conf.d/netflow/tcp_flags.yml
+
+- name: Deploy | [{{ logstash_nodename }}] - Generate Logstash Node Config
+  vars:
+    netflow: "{{ node_vars.netflow | default({'inputs':{},'outputs':[]}) }}"
+    logstash_rest_api_port: "{{ netflow.inputs.udp[0].port | int + 30000 }}"
+    jmxremote_port: "{{ netflow.inputs.udp[0].port | int + 40000 }}"
+  template:
+    src: "{{ item }}"
+    dest: "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - netflow.json.j2
+    - jvm.options.j2
+    - logstash.yml.j2
+    - conf.d/01-input.j2
+    - conf.d/02-filter.j2
+    - conf.d/03-output.j2

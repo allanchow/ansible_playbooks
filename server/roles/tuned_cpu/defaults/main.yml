@@ -1,0 +1,16 @@
+---
+# epb=0, high performance
+# http://www.phoronix.com/scan.php?page=article&item=ubuntu_linux_epb&num=2
+grub_high_performance_options:
+  - pcie_aspm.policy=performance
+  - intel_pstate=enable
+  - intel_idle.max_cstate=0
+  - processor.max_cstate=1
+  - processor.ignore_ppc=1
+  - idle=halt
+  - cpufreq.governor=performance
+  - intel_iommu=on amd_iommu=fullflush iommu=pt
+  - nohalt
+  - workqueue.power_efficient=n
+  - thermal.off=1
+  - epb=0

@@ -1,0 +1,15 @@
+---
+- name: Install bash-completion
+  apt:
+    name: bash-completion
+    state: present
+    install_recommends: no
+
+- name: Copy system-wide profile
+  copy:
+    src: profile
+    dest: /etc/profile
+    force: yes
+    mode: 0644
+    owner: root
+    group: root

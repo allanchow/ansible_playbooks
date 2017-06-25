@@ -1,0 +1,33 @@
+#{{ ansible_managed }}
+
+server {
+  #rcvbuf=2k sndbuf=64k;
+  listen 80 default_server deferred reuseport backlog=65535 so_keepalive=on
+  {%- if tcp_fastopen_enabled %} fastopen=30000{% endif %};
+#  listen [::]:80 default_server deferred reuseport backlog=65535 so_keepalive=on
+  {%- if tcp_fastopen_enabled %} fastopen=30000{% endif %};
+
+  keepalive_timeout 0;
+  lingering_close off;
+  expires -1;
+  location = /nginx_status {
+    default_type 'text/plain';
+    gzip on;
+    access_log off;
+    stub_status on;
+    {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 %}
+    allow {{ ip | resolve }};
+    {% endfor %}
+    allow 127.0.0.1;
+    deny all;
+  }
+  location / { return 444; }
+}
+server {
+  listen 443 ssl default_server;
+#  listen [::]:443 ssl default_server ipv6only=on;
+  gzip off;
+  ssl_certificate      {{ nginx.cert_root | basename }}/{{ ssl.default_crt }};
+  ssl_certificate_key  {{ nginx.cert_root | basename }}/{{ ssl.default_key }};
+  return 444;
+}

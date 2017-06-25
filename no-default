@@ -1,0 +1,27 @@
+#Ansible managed
+
+server {
+  #rcvbuf=2k sndbuf=64k;
+  listen 80 default_server deferred reuseport backlog=65535 so_keepalive=on fastopen=30000;
+#  listen 443 ssl default_server deferred reuseport backlog=65535 so_keepalive=on fastopen=30000;
+  keepalive_timeout 0;
+  lingering_close off;
+  expires -1;
+  location = /nginx_status {
+    gzip on;
+    access_log off;
+    stub_status on;
+        allow 220.246.98.175;
+        allow 59.149.245.236/30;
+        allow 27.111.185.128/28;
+        allow 27.111.174.56/30;
+        allow 127.0.0.1;
+    deny all;
+  }
+  location / { return 444; }
+}
+#server {
+#  listen 443 ssl default_server;
+#  listen [::]:443 ssl default_server ipv6only=on;
+#  return 444;
+#}

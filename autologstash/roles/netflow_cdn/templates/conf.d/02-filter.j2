@@ -1,0 +1,85 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+filter {
+  if [type] == "udp_monitor"             { drop {} }
+  if [type] == "netflow" {
+#    if [netflow][sampling_interval] > 0 {
+      ruby {
+        code => '
+#          st = event.get("[netflow][sampling_interval]").to_f
+          st = 1
+          event.set("[netflow][bps]", (event.get("[netflow][in_bytes]").to_f * st * 8.0 / 60.0).round(5))
+          event.set("[netflow][pps]", (event.get("[netflow][in_pkts]").to_f * st / 60.0).round(5))
+        '
+      }
+#   }
+    mutate {
+      add_field => { "[cdnhost]" => "%{[host]}" }
+    }
+    dns {
+      reverse => [ "[cdnhost]" ]
+      action => "replace"
+      max_retries => 2
+      hit_cache_ttl => 60
+      hit_cache_size => 5000
+      failed_cache_ttl => 30
+      failed_cache_size => 1000
+    }
+    if "%{[cdnhost]}" == "%{[host]}" {
+      mutate {
+        remove_field => [ "cdnhost" ]
+      }
+    }
+    cidr {
+      add_tag => [ "private_src_ip" ]
+      address => [ "%{[netflow][ipv4_src_addr]}" ]
+      network => [ "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    }
+    if "private_src_ip" not in [tags]  {
+      geoip {
+        source => "[netflow][ipv4_src_addr]"
+        target => "src_geoip"
+        database => "{{ logstash_config }}/{{ db_geo }}"
+        remove_tag => [ "private_src_ip" ]
+      }
+    }
+    cidr {
+      add_tag => [ "private_dst_ip" ]
+      address => [ "%{[netflow][ipv4_dst_addr]}" ]
+      network => [ "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    }
+    if "private_dst_ip" not in [tags]  {
+      geoip {
+        source => "[netflow][ipv4_dst_addr]"
+        target => "dst_geoip"
+        database => "{{ logstash_config }}/{{ db_geo }}"
+        remove_tag => [ "private_dst_ip" ]
+      }
+    }
+    translate {
+      field => "[netflow][protocol]"
+      destination => "[netflow][protocol_name]"
+      dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/proto.yml"
+      fallback => "no match"
+    }
+    translate {
+      field => "[netflow][tcp_flags]"
+      destination => "[netflow][tcp_flags_name]"
+      dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/tcp_flags.yml"
+      fallback => "no match"
+    }
+    translate {
+      field => "[netflow][l4_src_port]"
+      destination => "[netflow][l4_src_port_name]"
+      dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/src_dst_port.yml"
+      fallback => "no match"
+    }
+    translate {
+      field => "[netflow][l4_dst_port]"
+      destination => "[netflow][l4_dst_port_name]"
+      dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/src_dst_port.yml"
+      fallback => "no match"
+    }
+  }
+}

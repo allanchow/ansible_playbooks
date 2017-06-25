@@ -1,0 +1,26 @@
+---
+- set_fact: logstash_nodename={{ role_path | basename }}
+- include_role:
+    name: _predeploy
+# - include_role:
+#     name: _logstash_prerequisite
+#   with_items:
+#     - logstash-filter-syslog_pri
+
+- name: Deploy | [{{ logstash_nodename }}] - Generate Logstash Node Config
+  vars:
+    api_kong_gw: "{{ node_vars.api_kong_gw | default({'inputs':{},'outputs':[]}) }}"
+    logstash_rest_api_port: "{{ api_kong_gw.inputs.udp[0].port | int + 30000 }}"
+    jmxremote_port: "{{ api_kong_gw.inputs.udp[0].port | int + 40000 }}"
+  template:
+    src: "{{ item }}"
+    dest: "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item | replace('.j2', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - jvm.options.j2
+    - logstash.yml.j2
+    - conf.d/01-input.j2
+    - conf.d/02-filter.j2
+    - conf.d/03-output.j2

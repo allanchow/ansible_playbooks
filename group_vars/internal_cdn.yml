@@ -1,0 +1,17 @@
+---
+mode: prod
+type: internal
+cdn:
+  logstash:
+    access_log:
+      udp:
+        host: "{{ logstash.vip.prod }}"
+        port: 10514
+    error_log:
+      udp:
+        host: "{{ logstash.vip.prod }}"
+        port: 10515
+softflowd:
+  path: "{{ base_root }}/softflowd"
+  ip: "{{ logstash.vip.prod }}"
+  port: 9996

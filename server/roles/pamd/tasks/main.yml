@@ -1,0 +1,22 @@
+---
+- name: Fix to terminate session after shutdown/reboot
+  apt:
+    name: libpam-systemd
+    state: present
+    install_recommends: no
+  notify:
+    - pam-auth-update
+# - name: Pam.d | Copy etc files
+#   copy: src=etc dest=/ owner=root group=root mode=0644
+
+- name: Modify PAM limits
+  pam_limits:
+    domain: "*"
+    limit_type: '-'
+    limit_item: "{{ item }}"
+    value: 65535
+  with_items:
+    - nproc
+    - nofile
+  notify:
+    - pam-auth-update

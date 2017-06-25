@@ -1,0 +1,14 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+filter {
+  if [type] == "udp_monitor"             { drop {} }
+  grok {
+    match => { "message" => "<%{NONNEGINT:syslog_pri}>%{SPACE}%{SYSLOGTIMESTAMP:timestamp} %{SYSLOGHOST:logsource} %{SYSLOGPROG}: %{GREEDYDATA:message}" }
+    overwrite => [ "message" ]
+  }
+  syslog_pri {
+    syslog_pri_field_name => "syslog_pri"
+    use_labels => true
+  }
+}
