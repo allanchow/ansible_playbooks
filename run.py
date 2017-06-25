@@ -26,11 +26,9 @@ if __name__ == '__main__':
     group.add_argument('--prod', action='store_true', help='Deploy to production CDN')
     group.add_argument('--dev', action='store_true', help='Deploy to uat CDN')
     group.add_argument('--local', action='store_true', help='Deploy to localhost for testing')
-    __parser.add_argument('--nginx', action='store_true', help='Deploy nginx config')
     __parser.add_argument('--dryrun', action='store_true', help='Run in dryrun mode without touching any targeted server config')
     __pargs = __parser.parse_known_args()
 
-    run_playbook = __pargs[0].nginx and "autongx/main.yml" or "autoconf/main.yml"
     dryrun = __pargs[0].dryrun
 
     __varset = collections.namedtuple('__varset', ['inv_deploy'])
@@ -40,7 +38,6 @@ if __name__ == '__main__':
     elif __pargs[0].dev:
         port = 11000
         env = __varset('all_tb_cdn')
-        #env = __varset('uat-cdn-hk-01')
     elif __pargs[0].local:
         port = 12000
         env = __varset('localhost')
@@ -59,7 +56,7 @@ if __name__ == '__main__':
         env = os.environ
         env.update({'PATH': '%s:/usr/bin:/bin:/sbin:/usr/local/bin' % env['PATH']})
         __script_path = os.path.dirname(os.path.realpath(__file__))
-        subprocess.call(["/usr/bin/env", "ansible-playbook", "%s/%s" % (__script_path, run_playbook)] + ansible_extra_vars + __pargs[1], cwd=__script_path, env=env)
+        subprocess.call(["/usr/bin/env", "ansible-playbook", "%s/%s" % (__script_path, "autoconf/main.yml")] + ansible_extra_vars + __pargs[1], cwd=__script_path, env=env)
         sock.close()
     except socket.error:
         sys.stderr.write('Only one Playbook instance can be running / port %s cannot be bind\n' % port)
