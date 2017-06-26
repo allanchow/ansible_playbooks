@@ -5,4 +5,5 @@
 *.pyc
 files/*
 !files/nginx
+!files/modules/*
 *.json
