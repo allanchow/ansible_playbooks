@@ -23,6 +23,9 @@ http {
     "~\d{10,}" 0;
   }
   access_log off;
+# add a dummy server block for invalidating "xxx*ab.com" pattern
+# Related to nginx ticket #1224
+# https://trac.nginx.org/nginx/ticket/1224
   server {
     server_name dummy.com;
   }
