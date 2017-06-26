@@ -366,7 +366,9 @@
         failed_when: ngx_result | failed
 
       - name: Nginx | Reload
-        command: "{{ nginx.sbin_root }}/nginx -s reload"
+        systemd:
+          name: nginx.service
+          state: reloaded
         when: ngx_result | succeeded
 
       rescue:
