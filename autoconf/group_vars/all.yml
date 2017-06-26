@@ -29,3 +29,6 @@ error_codes:
   E1007: {E1007: {code: 1007, type: ERROR,  msg: "staging config test fails"}}
   E3001: {E3001: {code: 3001, type: ERROR, msg: "xns api call fails"}}
   E3002: {E3002: {code: 3002, type: WARN,  msg: "dns record(s) already exists, skip dns update"}}
+
+# 2017-Jun-09 -> disabled
+use_xns_cmd: False

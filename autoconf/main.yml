@@ -175,7 +175,7 @@
       stat: path="{{ cmd_xns }}"
       register: xns
       failed_when: xns.stat.exists == False or xns.stat.executable|default(False) == False
-      when: dryrun | bool == False
+      when: use_xns_cmd and dryrun | bool == False
 
     - name: Env | Reset configuration root dir
       file: path="{{root}}/{{ mode }}" state={{ item }} mode=0777
