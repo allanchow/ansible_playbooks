@@ -68,7 +68,11 @@
       tags: [cdn]
 
 
-  #
+  # python3-chardet* python3-debian* python3-requests* ssh-import-id*
+# pip install chardet
+#pip install python3-debian
+# pip install requests
+# pip install ssh-import-id
   # tasks:
   #   - name: Insert new pam.d rules after pam_unix.so
   #     pamd:
