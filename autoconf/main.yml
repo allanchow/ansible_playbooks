@@ -311,7 +311,7 @@
             delay=5
         become: False
         register: ssh
-        failed_when: "{{ ssh.state | default('absent') != 'started' }}"
+        failed_when: ssh.state | default('absent') != 'started'
 
       - name: Deploy | ensure hosts is a known host
         local_action: lineinfile
