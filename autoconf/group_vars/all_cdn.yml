@@ -1,5 +1,5 @@
 ---
-api_portal_endpoint: http://portal.allbrightnet.com/api/v1
+api_portal_endpoint: https://portal.allbrightnet.com/api/v1
 api_portal_key: SVSDk3gnpJQQb4lImyESzhSdgr4BdOr8
 api_user: portal.api
 api_pw: Portal.API@Allbright2017
