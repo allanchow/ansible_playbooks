@@ -36,6 +36,7 @@
   roles:
     - { role: locales,        tags: [sys, cdn, locales] }
     - { role: ntp,            tags: [sys, cdn, ntp] }
+    - { role: cron,           tags: [sys, cdn, cron] }
     - { role: dns,            tags: [cdn, dns] }
     - { role: apt,            tags: [sys, cdn, apt] }
     - { role: hostname,       tags: [sys, cdn, hostname] }

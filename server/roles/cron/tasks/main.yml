@@ -1,0 +1,22 @@
+---
+- name: Install cron
+  apt:
+    name: cron
+    state: present
+    install_recommends: no
+
+- name: Adjust cron default job time
+  copy:
+    src: crontab
+    dest: /etc/crontab
+    force: yes
+    mode: 0644
+    owner: root
+    group: root
+  register: crontab_copy
+
+- name: Start cron
+  systemd:
+    name: cron
+    state: "{{ (crontab_copy | changed) | ternary('restarted', 'started') }}"
+    enabled: true
