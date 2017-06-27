@@ -26,14 +26,6 @@
       fail: msg='Ubuntu >=16 is required'
       when: not (ansible_distribution == 'Ubuntu' and ansible_lsb.major_release|int >= 16)
 
-    - name: Network | Build CDN IP list
-      set_fact:
-        cdn_ips: "{{ cdn_ips | default([]) + [lookup('dig', '%s/A' % (hostvars[item].inventory_hostname_short))] }}"
-      with_items:
-        - "{{ groups['all_cdn'] | default([]) }}"
-        - "{{ groups['all_tb_cdn'] | default([]) }}"
-      delegate_to: localhost
-      run_once: True
       tags: always
 
     - include: facts.yml
