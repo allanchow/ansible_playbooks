@@ -1,0 +1,7 @@
+---
+- name: Ensure directories
+  file: path="{{ item }}" state="directory" mode=0755 owner=root group=root
+  with_items:
+    - "{{ base_root }}"
+    - "{{ base_root }}/bin"
+    - /etc/systemd/system/
