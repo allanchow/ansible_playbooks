@@ -1,0 +1,8 @@
+---
+mongodb_ver: 3.4
+mongodb_rotate_days: 45
+mongodb_port: 27217
+mongodb_db: logs
+mongodb_collection: ngx-access-cdn
+
+mongodb_data_path: /var/lib/mongodb

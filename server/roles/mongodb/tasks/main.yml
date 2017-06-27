@@ -1,0 +1,37 @@
+---
+- name: Install MongoDB public GPG key
+  command: apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6
+  changed_when: False
+
+- name: Ensure /etc/apt/sources.list.d exist
+  file: path=/etc/apt/sources.list.d state=directory
+
+- name: Install MongoDB source list
+  shell: "echo \"deb [ arch=amd64,arm64 ] http://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/{{ mongodb_ver }} multiverse\" | sudo tee /etc/apt/sources.list.d/mongodb-org-{{ mongodb_ver }}.list"
+  changed_when: False
+  register: mongodb_source
+
+- name: Install MongoDB
+  apt:
+    name: mongodb-org
+    state: latest
+    install_recommends: no
+    update_cache: yes    
+  register: mongodb_install
+  when: mongodb_source.rc == 0
+
+- name: Start MongoDB
+  systemd:
+    name: mongod
+    state: "{{ (mongodb_install | changed) | ternary('restarted', 'started') }}"
+    enabled: yes
+
+- name: Install logrotate.d/
+  template:
+    src: logrotate.d/mongodb.j2
+    dest: /etc/logrotate.d/mongodb
+    force: yes
+    owner: root
+    group: root
+    mode: 0644
+  when: mongodb_install | succeeded

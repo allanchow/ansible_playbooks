@@ -1,0 +1,26 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+
+/var/log/mongodb/*.log {
+  daily
+  rotate {{ mongodb_rotate_days }}
+  missingok
+  compress
+  delaycompress
+  notifempty
+  dateext
+  sharedscripts
+  postrotate
+    /bin/kill -SIGUSR1 $(cat /var/lib/mongodb/mongod.lock 2> /dev/null) 2> /dev/null || true
+    MONGO_PORT={{ mongodb_port }}
+    MONGO_CONN={{ ansible_default_ipv4.address }}
+    MONGO_DB={{ mongodb_db }}
+    MONGO_COLLECTION="db.getCollection('{{ mongodb_collection }}')"
+    MONGO_CMD="mongo --quiet --port=$MONGO_PORT --host=$MONGO_CONN $MONGO_DB"
+    ROTATED_DAYS={{ mongodb_rotate_days }}
+    ROTATED_EPOCH=$(echo $(date -d $(TZ='Asia/Hong_Kong' date --date="$ROTATED_DAYS days ago" '+%Y-%m-%d') +%s)*1000 | bc)
+    OLD_DATA_EXIST=$($MONGO_CMD --eval "$MONGO_COLLECTION.count({request_at_ms:{\$lt:$ROTATED_EPOCH}})")
+    echo "[$(date)]: Found $OLD_DATA_EXIST records" >> /tmp/rotate_mongo
+    [ $OLD_DATA_EXIST -gt 0 ] && ($MONGO_CMD --eval "$MONGO_COLLECTION.deleteMany({request_at_ms:{\$lt:$ROTATED_EPOCH}})" >> /tmp/rotate_mongo)
+  endscript
+}
