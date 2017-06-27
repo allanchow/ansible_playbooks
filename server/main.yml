@@ -29,6 +29,7 @@
       tags: always
 
     - include: facts.yml
+      tags: always
 
   roles:
     - { role: locales,        tags: [sys, cdn, locales] }
