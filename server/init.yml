@@ -1,13 +1,23 @@
 ---
+- name: Ubuntu >=16, x64, LTS is required
+  fail: msg='Ubuntu >=16 is required'
+  when: not (ansible_distribution == 'Ubuntu'
+          and ansible_lsb.major_release|int >= 16
+          and ansible_lsb.description | search(' LTS')
+          and ansible_architecture == 'x86_64')
+  tags: always
+
 - name: Network | Get Default interface
   shell: /sbin/ip route show | grep "^default" | sed "s|^.* dev \([^ \t]*\) .*$|\1|"
   register: def_iface_out
   changed_when: False
+  tags: always
 
 - name: Env | Get Root Physical Block Size
   shell: blockdev --getpbsz $(df | grep " /$" | cut -d" " -f1) 2>/dev/null || echo 512
   register: pbsz_out
   changed_when: False
+  tags: always
 #
 # # lscpu or {{ ansible_processor_vcpus }} are unreliable in VPS, their value may be a vhost value
 # - name: Env | Get CPU Count
@@ -20,7 +30,8 @@
   shell: systemd --version | head -n 1 | cut -d' ' -f2
   register: systemd_ver_out
   changed_when: False
-  
+  tags: always
+
 # https://www.mail-archive.com/debian-bugs-dist@lists.debian.org/msg1496554.html
 # https://bugs.debian.org/cgi-bin/bugreport.cgi?att=1;bug=832713;filename=skip-seccomp.patch;msg=128
 # https://github.com/systemd/systemd/issues/3882
@@ -28,12 +39,14 @@
   shell: grep Seccomp /proc/self/status && echo 1 || echo 0
   register: is_seccomp_enabled_out
   changed_when: False
+  tags: always
 
 - set_fact:
     container:                     "{{ ansible_virtualization_role == 'guest' and
                                       (ansible_virtualization_type == 'openvz' or
                                        ansible_virtualization_type == 'lxc' or
                                        ansible_virtualization_type == 'docker') }}"
+  tags: always
 
 - set_fact:
     vm:                           "{{ ansible_virtualization_role == 'guest' and not container }}"
@@ -44,3 +57,4 @@
     is_seccomp_enabled:           "{{ is_seccomp_enabled_out.stdout | int == 1 }}"
     iface:                        "{{ def_iface_out.stdout }}"
     pbsz:                         "{{ pbsz_out.stdout | default(512) | int }}"
+  tags: always
