@@ -1,15 +1,7 @@
 #!/usr/bin/env ansible-playbook
 ---
+- include: python2.yml
 - hosts: "{{ inv }}"
-  gather_facts: False
-  become_method: sudo
-  become: yes
-  tasks:
-  # Ubuntu 16.04+ will not install python 2 in default
-  - name: Ensure Python 2
-    raw: test -e /usr/bin/python || (apt-get -y update && apt-get install -y --no-install-recommends python-minimal)
-    changed_when: False
-    tags: always
 
 - hosts: "{{ inv }}"
 #    - uat-cdn-us-01
