@@ -14,12 +14,16 @@
   when: use_xns_cmd
 
 - set_fact:
+    dns_result_ret: "{{ dns_result.stdout | from_json | json_query('result') | default(0) }}"
+  when: use_xns_cmd
+
+- set_fact:
     resp_body: "{{ resp_body | difference(err_resp_body) | union(err_resp_body | map('combine',{'errors':dns_error_map[err_code|string]}, recursive=true) | list) }}"
   vars:
     err_resp_body: "{{ resp_body | selectattr('resource_id', 'equalto', item.resource_id) | list }}"
     #dns_return: "{{ 0 if dns_result | failed else dns_result.stdout | from_json | json_query('result') }}"
     #dns_return: "{{ dns_result | failed | ternary(0, dns_result.stdout | from_json | json_query('result') | int) }}"
-    dns_return: "{{ use_xns_cmd | ternary(1, dns_result.stdout | from_json | json_query('result') | default(0)) }}"
+    dns_return: "{{ dns_result_ret | default(1) }}"
     err_code: "{{ dns_return if dns_return | int in [0, 1,-1] else 0 }}"
     dns_error_map:
       '1': {}
