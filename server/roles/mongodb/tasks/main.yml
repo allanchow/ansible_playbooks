@@ -16,22 +16,26 @@
     name: mongodb-org
     state: latest
     install_recommends: no
-    update_cache: yes    
+    update_cache: yes
   register: mongodb_install
   when: mongodb_source.rc == 0
 
-- name: Start MongoDB
-  systemd:
-    name: mongod
-    state: "{{ (mongodb_install | changed) | ternary('restarted', 'started') }}"
-    enabled: yes
-
-- name: Install logrotate.d/
+- name: Install mongod conf
   template:
-    src: logrotate.d/mongodb.j2
-    dest: /etc/logrotate.d/mongodb
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
     force: yes
     owner: root
     group: root
     mode: 0644
+  with_items:
+    - { src: 'logrotate.d/mongodb.j2', dest: '/etc/logrotate.d/mongodb' }
+    - { src: 'mongod.conf.j2', dest: '/etc/mongod.conf' }
+  register: mongodb_conf
   when: mongodb_install | succeeded
+
+- name: Start MongoDB
+  systemd:
+    name: mongod
+    state: "{{ (mongodb_install | changed or mongodb_conf | changed) | ternary('restarted', 'started') }}"
+    enabled: yes
