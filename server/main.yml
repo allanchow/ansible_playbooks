@@ -1,14 +1,6 @@
 #!/usr/bin/env ansible-playbook
----
 - include: python2.yml
 - hosts: "{{ inv }}"
-
-- hosts: "{{ inv }}"
-#    - uat-cdn-us-01
-#  - all_g1_cdn
-#    - cdn-g1-hk-01
-#    - cdn-g1-hk-04
-#    - cdn-g1-sg-01
   #strategy: free
   become_method: sudo
   become: yes
