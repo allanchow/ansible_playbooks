@@ -23,16 +23,7 @@
   #vars:
   # deploy_file_path: "{{ deployment_path }}"
   pre_tasks:
-    - name: Ubuntu >=16, x64, LTS is required
-      fail: msg='Ubuntu >=16 is required'
-      when: not (ansible_distribution == 'Ubuntu'
-              and ansible_lsb.major_release|int >= 16
-              and ansible_lsb.description | search(' LTS')
-              and ansible_architecture == 'x86_64')
-      tags: always
-
-    - include: facts.yml
-      tags: always
+    - include: init.yml
 
   roles:
     - { role: locales,        tags: [sys, cdn, locales] }
