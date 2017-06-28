@@ -1,7 +1,4 @@
 ---
-- name: Ensure /usr/local/bin directory
-  file: path="{{ base_root }}/bin" state="directory" mode=0755 owner=root group=root
-
 - name: Copy logger
   copy:
     src: logger
@@ -16,9 +13,6 @@
     name: netcat-openbsd
     state: present
     install_recommends: no
-
-- name: Ensure user system service directory
-  file: path="/etc/systemd/system/" state="directory" mode=0755 owner=root group=root
 
 - name: Generate heartbeat.timer and heartbeat.service
   vars:
@@ -41,20 +35,3 @@
     daemon_reload: yes
     enabled: yes
   when: heartbeat_enabled
-#
-# - name: Deploy | Cron | heartbeat
-#   become: true
-#   cron:
-#     name: check heartbeat
-#     minute: "*/1"
-#     job: "{{ script_path }}/check_heartbeat.sh"
-#   when: heartbeat is defined and mode == "prod"
-#
-#
-# - name: DNS | rc.local
-#   blockinfile:
-#     path: /etc/rc.local
-#     block: |
-#       nameserver 8.8.8.8
-#       nameserver 8.8.4.4
-#       search allbrightnetwork.com

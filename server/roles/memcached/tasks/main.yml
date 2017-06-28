@@ -8,9 +8,6 @@
     state: present
     system: yes
 
-- name: Ensure /usr/local/bin directory
-  file: path="{{ base_root }}/bin" state="directory" mode=0755 owner=root group=root
-
 - name: Copy memcached
   copy:
     src: memcached
