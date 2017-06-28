@@ -1,0 +1,28 @@
+#!/usr/bin/env ansible-playbook
+- hosts: mongodb
+  strategy: free
+  become_method: sudo
+  become: yes
+
+  pre_tasks:
+    - include: requirements.yml
+    - set_fact:
+        ip: "{{ ansible_default_ipv4.address }}"
+        port: 27217
+        db: logs
+        collection: ngx-access-cdn
+
+  roles:
+    - {
+        role: mongodb,
+        mongodb_ip: "{{ ip }}",
+        mongodb_port: "{{ port }}",
+        mongodb_db: "{{ db }}",
+        mongodb_collection: "{{ collection }}"
+      }
+
+  tasks:
+    - name: Prepare MongoDB receiving ngx-access-cdn log
+      command: |
+        mongo --host={{ ip }} --port={{ port }} --eval "(db.getSiblingDB('{{ db }}')).createCollection('{{ collection }}')"
+      changed_when: False

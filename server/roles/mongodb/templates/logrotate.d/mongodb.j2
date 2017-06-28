@@ -13,7 +13,7 @@
   postrotate
     /bin/kill -SIGUSR1 $(cat /var/lib/mongodb/mongod.lock 2> /dev/null) 2> /dev/null || true
     MONGO_PORT={{ mongodb_port }}
-    MONGO_CONN={{ ansible_default_ipv4.address }}
+    MONGO_CONN={{ mongodb_ip }}
     MONGO_DB={{ mongodb_db }}
     MONGO_COLLECTION="db.getCollection('{{ mongodb_collection }}')"
     MONGO_CMD="mongo --quiet --port=$MONGO_PORT --host=$MONGO_CONN $MONGO_DB"
