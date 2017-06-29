@@ -54,7 +54,7 @@
   user: name="{{ nginx.user }}" groups="{{ memcached.user }}" append=yes
 
     # - name: Env | Memcached | Dir Setup
-    #   file: path="{{ memcached.unix.socket_path }}" state="directory" mode=0755 owner="{{ memcached.user }}" group="{{ memcached.user }}"
+    #   file: path="{{ memcached.unix.socket | dirname }}" state="directory" mode=0755 owner="{{ memcached.user }}" group="{{ memcached.user }}"
 
 - apt:
     name: bc
