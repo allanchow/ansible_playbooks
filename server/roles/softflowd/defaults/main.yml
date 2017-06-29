@@ -1,2 +1,9 @@
 ---
 softflowd_enabled: mode == "prod"
+softflowd_netflow_ver: 5
+softflowd_sampling_rate: 1
+softflowd_cap_iface: "{{ iface }}"
+softflowd_maxflow: 16384
+softflowd_flowlevel: full
+softflowd_dest_ip:
+softflowd_dest_port:

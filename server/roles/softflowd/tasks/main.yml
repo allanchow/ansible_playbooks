@@ -13,6 +13,9 @@
   when: softflowd_enabled
 
 - name: Generate softflowd.service
+  vars:
+    send_log: "{{ (softflowd_dest_ip is defined and softflowd_dest_ip | ipaddr) and
+              (softflowd_dest_port is defined and softflowd_dest_port | int > 0) }}"
   template:
     src: "{{ item.src }}"
     dest: "{{ item.dest }}"

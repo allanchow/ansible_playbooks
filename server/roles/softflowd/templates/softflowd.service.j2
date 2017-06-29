@@ -14,7 +14,7 @@ IOSchedulingPriority=4
 
 PIDFile=/var/run/softflowd.pid
 EnvironmentFile=/etc/default/softflowd
-ExecStart={{ base_root }}/bin/softflowd -d -i $IFACE -v $NETFLOW_VER -s $SAMPLING_RATE -n $DEST -T $FLOW_TRACK_LVL -m $MAXFLOW
+ExecStart={{ base_root }}/bin/softflowd -d -i $IFACE -v $NETFLOW_VER -s $SAMPLING_RATE {{ send_log | ternary('-n $DEST ','') }}-T $FLOW_TRACK_LVL -m $MAXFLOW $OPTIONS
 StandardOutput=null
 StandardError=null
 
