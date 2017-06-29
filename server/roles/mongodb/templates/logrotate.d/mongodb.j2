@@ -9,6 +9,7 @@
   delaycompress
   notifempty
   dateext
+  {% if mongodb_db is defined and mongodb_collection is defined %}
   sharedscripts
   postrotate
     /bin/kill -SIGUSR1 $(cat /var/lib/mongodb/mongod.lock 2> /dev/null) 2> /dev/null || true
@@ -23,4 +24,5 @@
     echo "[$(date)]: Found $OLD_DATA_EXIST records" >> /tmp/rotate_mongo
     [ $OLD_DATA_EXIST -gt 0 ] && ($MONGO_CMD --eval "$MONGO_COLLECTION.deleteMany({request_at_ms:{\$lt:$ROTATED_EPOCH}})" >> /tmp/rotate_mongo)
   endscript
+  {% endif %}
 }
