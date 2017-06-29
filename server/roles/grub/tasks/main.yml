@@ -22,19 +22,27 @@
   command: dpkg-divert --quiet --local --divert /etc/default/grub.dpkg-divert --rename /etc/default/grub
   args:
     creates: /etc/default/grub.dpkg-divert
-  when: grub_enabled and grub_file.stat.exists
+  when:
+    - grub_enabled
+    - grub_file.stat.exists
 
 - name: Get default kernel parameters
   shell: test -f /etc/default/grub.dpkg-divert && . /etc/default/grub.dpkg-divert || exit 0 ; echo $GRUB_CMDLINE_LINUX_DEFAULT | tr " " "\n"
   register: grub_register_default_cmdline
   changed_when: False
-  when: not ansible_check_mode and grub_enabled and grub_file.stat.exists
+  when:
+    - not ansible_check_mode
+    - grub_enabled
+    - grub_file.stat.exists
 
 - name: Get old kernel parameters
   shell: test -f /etc/default/grub.dpkg-divert && . /etc/default/grub.dpkg-divert || exit 0 ; echo $GRUB_CMDLINE_LINUX | tr " " "\n"
   register: grub_register_old_cmdline
   changed_when: False
-  when: not ansible_check_mode and grub_enabled and grub_file.stat.exists
+  when:
+    - not ansible_check_mode
+    - grub_enabled
+    - grub_file.stat.exists
 
 - name: Default kernel parameters
   set_fact:
