@@ -22,9 +22,8 @@
     group: root
     mode: 0644
     force: yes
-  with_items:
-    - iptables-rules.service.j2
-    - firewall.sh.j2
+  with_fileglob:
+    - templates/*.j2
 
 - name: Ensure iptables-rules.service is running and enabled as configured.
   systemd:
