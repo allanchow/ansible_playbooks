@@ -2,3 +2,5 @@
 mongodb_ver: 3.4
 mongodb_rotate_days: 45
 mongodb_data_path: /var/lib/mongodb
+mongodb_ip: 127.0.0.1
+mongodb_port: 27017
