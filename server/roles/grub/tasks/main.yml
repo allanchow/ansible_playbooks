@@ -21,7 +21,7 @@
 - name: Divert original /etc/default/grub
   command: dpkg-divert --quiet --local --divert /etc/default/grub.dpkg-divert --rename /etc/default/grub
   args:
-    creates: '/etc/default/grub.dpkg-divert'
+    creates: /etc/default/grub.dpkg-divert
   when: grub_enabled and grub_file.stat.exists
 
 - name: Get default kernel parameters
