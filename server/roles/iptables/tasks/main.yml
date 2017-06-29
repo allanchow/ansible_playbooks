@@ -25,6 +25,20 @@
   with_fileglob:
     - templates/*.j2
 
+- name: Ensure firewall.d directory
+  file: path="/etc/systemd/system/firewall.d/" state="directory" mode=0755 owner=root group=root
+
+- name: Generate firewall.d scripts
+  template:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/firewall.d/{{ item | basename | regex_replace('[.]j2$', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_fileglob:
+    - templates/firewall.d/*.j2
+
 - name: Ensure iptables-rules.service is running and enabled as configured.
   systemd:
     name: iptables-rules

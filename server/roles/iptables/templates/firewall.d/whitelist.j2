@@ -1,0 +1,12 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+#{{ ansible_managed }}
+
+# Temp - 202.53.150.9
+$IPT -A WHITELIST -s {{ 'cdn-g1-hk-06' | resolve }} -j ACCEPT -m comment --comment "cdn-g1-hk-06"
+
+{% if inventory_hostname_short == 'cdn-g1-hk-06' and cdn.logstash is defined %}
+{% set p = [ cdn.logstash.access_log.udp.port, cdn.logstash.error_log.udp.port ] | join(",") %}
+{% for ip in cdn_ips | unique %}
+$IPT -A WHITELIST -p udp -s {{ ip }} -m multiport --dport {{ p }} -j ACCEPT -m comment --comment "logstash temp"
+{% endfor %}
+{% endif %}
