@@ -28,7 +28,7 @@
 - name: Localize sources.list
   template:
     src: "{{ item }}"
-    dest: "/etc/apt/{{ item | regex_replace('\.j2$', '') }}"
+    dest: "/etc/apt/{{ item | regex_replace('[.]j2$', '') }}"
     owner: root
     group: root
     mode: 0644

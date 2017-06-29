@@ -17,7 +17,7 @@
 - name: Generate iptables-rules.servie
   template:
     src: "{{ item }}"
-    dest: "/etc/systemd/system/{{ item | basename | regex_replace('\.j2$', '') }}"
+    dest: "/etc/systemd/system/{{ item | basename | regex_replace('[.]j2$', '') }}"
     owner: root
     group: root
     mode: 0644

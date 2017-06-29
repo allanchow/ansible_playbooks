@@ -68,7 +68,7 @@
     - name: Deploy | Logstash - Generate Files
       template:
         src: "{{ item }}"
-        dest: "{{ logstash_root }}/{{ item | regex_replace('\.j2$', '') }}"
+        dest: "{{ logstash_root }}/{{ item | regex_replace('[.]j2$', '') }}"
         owner: root
         group: root
         mode: 0755

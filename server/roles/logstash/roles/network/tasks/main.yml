@@ -14,7 +14,7 @@
     jmxremote_port: "{{ network.inputs.udp[0].port | int + 40000 }}"
   template:
     src: "{{ item }}"
-    dest: "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item | regex_replace('\.j2$', '') }}"
+    dest: "{{ logstash.nodes_root }}/{{ logstash_nodename }}/{{ item | regex_replace('[.]j2$', '') }}"
     owner: root
     group: root
     mode: 0644
