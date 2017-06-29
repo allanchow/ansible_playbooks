@@ -119,13 +119,16 @@ ack_optimize(){
   $IPT -t mangle -A ack -j RETURN
   $IPT -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,RST,ACK ACK -j ack
 }
+whitelist() {
+  $IPT -N WHITELIST
+  $IPT -A INPUT -j WHITELIST -m comment --comment "whitelist"
+  . $(dirname $0)/firewall.d/whitelist  
+}
 allows() {
   # Office
   {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 %}
   $IPT -A INPUT -s {{ ip | resolve }} -j ACCEPT -m comment --comment "allbrightnet"
   {% endfor %}
-  # Temp - 202.53.150.9
-  $IPT -A INPUT -s {{ 'cdn-g1-hk-06' | resolve }} -j ACCEPT -m comment --comment "allbrightnet temp"
 }
 proxy_heartbeat_cdn() {
   {% set proxy_heartbeat_cdn = heartbeat is defined | ternary(heartbeat.outputs.proxy | selectattr("host", "match", "^%s" % inventory_hostname_short) | list | default([None], True) | first, "None") %}
@@ -216,6 +219,7 @@ do_start() {
   #udomain
   other_tos
   allow_non_tcp
+  whitelist
   default_rej
 }
 main() {
