@@ -18,6 +18,8 @@
     group: root
 
 - name: Generate memcached config
+  vars:
+    via: "{{ memcached_tcp | ternary('-p %s -l %s' % (memcached_tcp_port, memcached_tcp_ip), '-a 775 -s %s' % memcached_socket) }}"
   template:
     src: "{{ item }}"
     dest: "/etc/default/{{ item | regex_replace('[.]j2$', '') }}"

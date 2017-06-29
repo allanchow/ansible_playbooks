@@ -17,9 +17,11 @@ PIDFile=/var/run/memcached/memcached.pid
 EnvironmentFile=/etc/default/memcached
 # Run ExecStartPre with root-permissions
 PermissionsStartOnly=true
-ExecStartPre=/bin/mkdir -p {{ memcached.unix.socket | dirname }}
-ExecStartPre=/bin/chown {{ memcached.user }}:{{ memcached.user }} {{ memcached.unix.socket | dirname }}
-ExecStart={{ base_root }}/bin/memcached -d -P /var/run/memcached/memcached.pid -u {{ memcached.user }} -m $CACHESIZE -c $MAXCONN $OPTIONS
+{% if not memcached_tcp %}
+ExecStartPre=/bin/mkdir -p {{ memcached_socket | dirname }}
+ExecStartPre=/bin/chown {{ memcached_user }}:{{ memcached_user }} {{ memcached_socket | dirname }}
+{% endif %}
+ExecStart={{ base_root }}/bin/memcached -d -P /var/run/memcached/memcached.pid -u {{ memcached_user }} -m $CACHESIZE -c $MAXCONN $OPTIONS
 
 StandardOutput=null
 StandardError=null
