@@ -5,7 +5,7 @@
 Description={{ service_name }}
 
 [Timer]
-OnCalendar=*-*-* *:*:0/30
+OnCalendar=*-*-* *:*:0/{{ heartbeat_every_sec }}
 RandomizedDelaySec=0
 AccuracySec=1us
 RemainAfterElapse=off
