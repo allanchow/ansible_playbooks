@@ -12,36 +12,24 @@
     - softflowctl
   when: softflowd_enabled
 
-- name: Generate softflowd config
-  template:
-    src: "{{ item }}"
-    dest: "/etc/default/{{ item | regex_replace('[.]j2$', '') }}"
-    owner: root
-    group: root
-    mode: 0644
-    force: yes
-  with_items:
-    - softflowd.j2
-  register: softflowd_cfg
-  when: softflowd_enabled
-
 - name: Generate softflowd.service
   template:
-    src: "{{ item }}"
-    dest: "/etc/systemd/system/{{ item | regex_replace('[.]j2$', '') }}"
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
     owner: root
     group: root
     mode: 0644
     force: yes
   with_items:
-    - softflowd.service.j2
+    - { src: softflowd.j2, dest: /etc/default/softflowd }
+    - { src: softflowd.service.j2, dest: /etc/systemd/system/softflowd.service }
   register: softflowd_srv
   when: softflowd_enabled
 
 - name: Ensure softflowd is running and enabled as configured.
   systemd:
     name: softflowd.service
-    state: "{{ (softflowd_cfg | changed or softflowd_srv | changed) | ternary('restarted', 'started') }}"
+    state: "{{ (softflowd_srv | changed) | ternary('restarted', 'started') }}"
     daemon_reload: yes
     enabled: yes
   when: softflowd_enabled
