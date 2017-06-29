@@ -20,7 +20,7 @@
 - name: Generate memcached config
   template:
     src: "{{ item }}"
-    dest: "/etc/default/{{ item | replace('.j2', '') }}"
+    dest: "/etc/default/{{ item | regex_replace('\.j2$', '') }}"
     owner: root
     group: root
     mode: 0644
@@ -32,7 +32,7 @@
 - name: Generate memcached.service
   template:
     src: "{{ item }}"
-    dest: "/etc/systemd/system/{{ item | replace('.j2', '') }}"
+    dest: "/etc/systemd/system/{{ item | regex_replace('\.j2$', '') }}"
     owner: root
     group: root
     mode: 0644
