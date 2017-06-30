@@ -1,5 +1,5 @@
 ---
-- name: Install related components
+- name: Install related components and using openresolv
   apt:
     name: "{{ item }}"
     state: present
@@ -7,6 +7,12 @@
   with_items:
     - dnsutils
     - resolvconf
+
+- name: stop systemd-resolved
+  systemd:
+    name: systemd-resolved
+    state: stopped
+    enabled: no
 
 - name: Ensure resolvconf is running and enabled as configured.
   systemd:
@@ -59,3 +65,21 @@
     state: link
   notify:
     - regenerate resolv.conf
+
+- name: Disable LLMNR
+  lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: '^LLMNR='
+    line: 'LLMNR=no'
+
+- stat:
+    path: /run/systemd/resolve/resolv.conf
+  register: systemd_resolved_conf
+
+- name: Link resolvconf original to tail
+  file:
+    src: /etc/resolv.conf
+    dest: /run/systemd/resolve/resolv.conf
+    force: yes
+    state: link
+  when: systemd_resolved_conf.stat.exists == True
