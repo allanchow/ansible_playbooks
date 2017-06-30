@@ -1,5 +1,5 @@
 ---
-- name: Reconfigue bash
+- name: Reconfigure bash
   command: dpkg-reconfigure bash
   changed_when: False
 
