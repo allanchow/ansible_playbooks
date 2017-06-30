@@ -25,9 +25,29 @@
 - name: Ensure locales is installed
   apt:
     name: locales
-    state: present
+    state: latest
     install_recommends: no
 
-- name: Locale - en_HK.UTF-8
-  command: locale-gen "en_HK.UTF-8"
+- name: Install language packs
+  apt:
+    name: "{{ item }}"
+    state: latest
+    install_recommends: no
+  with_items:
+    - language-pack-en
+    - language-pack-en-base
+  register: locale_languages
+
+- name: Reconfigure locales
+  command: dpkg-reconfigure --frontend=noninteractive locales
+  changed_when: False
+  when: locale_languages | changed
+
+- name: Configure system locale
+  locale_gen:
+    name: "{{ locale }}.{{ encoding }}"
+    state: present
+
+- name: Update default locales
+  command: /usr/sbin/update-locale --reset LANG=\"{{ locale }}.{{ encoding }}\" LANGUAGE=\"{{ locale }}:en\"
   changed_when: False
