@@ -60,7 +60,6 @@ const:
     nrpe: 5666
 #cdn_suffix: .allbrightnetwork.com
 softflowd:
-  path: "{{ base_root }}/softflowd"
   ip: "{{ logstash.vip.prod }}"
   port: 9996
 heartbeat:
