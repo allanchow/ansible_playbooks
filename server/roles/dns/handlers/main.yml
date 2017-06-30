@@ -1,3 +1,4 @@
 ---
 - name: regenerate resolv.conf
   command: /sbin/resolvconf -u
+  changed_when: False
