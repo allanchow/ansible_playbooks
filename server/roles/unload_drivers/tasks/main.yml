@@ -11,6 +11,7 @@
     mode:  0644
 
 # https://people.canonical.com/~ubuntu-security/cve/2017/CVE-2017-6074.html
+# https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-6074
 - name: CVE-2017-6074 - Blacklist the dccp ipv[46] autoloading aliases
   blockinfile:
     path: /etc/modprobe.d/blacklist-dccp.conf
