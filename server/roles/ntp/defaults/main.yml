@@ -1,6 +1,5 @@
 ---
 ntp_enabled: True
-ntp_timezone: Asia/Hong_Kong
 
 ntp_manage_config: True
 
