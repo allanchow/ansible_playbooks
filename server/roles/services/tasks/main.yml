@@ -6,6 +6,5 @@
     state: started
     enabled: true
   with_items:
-    - cron
     - rsyslog
     - ssh
