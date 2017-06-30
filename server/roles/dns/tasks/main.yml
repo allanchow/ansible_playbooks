@@ -83,3 +83,5 @@
     force: yes
     state: link
   when: systemd_resolved_conf.stat.exists == True
+
+- meta: flush_handlers

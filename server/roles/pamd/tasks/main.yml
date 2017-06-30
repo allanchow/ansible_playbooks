@@ -20,3 +20,5 @@
     - nofile
   notify:
     - pam-auth-update
+
+- meta: flush_handlers

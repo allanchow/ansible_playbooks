@@ -31,3 +31,5 @@
     - restart ntp
     - restart cron
   when: ntp_manage_config
+
+- meta: flush_handlers
