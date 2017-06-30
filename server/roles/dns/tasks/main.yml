@@ -38,7 +38,7 @@
     content: ''
     force: yes
   notify:
-    - regenerate resolv.conf
+    - 'regenerate resolv.conf'
 
 - name: Set resolvconf original
   copy:
@@ -46,7 +46,7 @@
     dest: /etc/resolvconf/resolv.conf.d/original
     force: yes
   notify:
-    - regenerate resolv.conf
+    - 'regenerate resolv.conf'
 
 - name: Link resolvconf original to tail
   file:
@@ -55,7 +55,7 @@
     force: yes
     state: link
   notify:
-    - regenerate resolv.conf
+    - 'regenerate resolv.conf'
 
 - name: Link /etc/resolv.conf to /run/resolvconf/resolv.conf
   file:
@@ -64,7 +64,7 @@
     force: yes
     state: link
   notify:
-    - regenerate resolv.conf
+    - 'regenerate resolv.conf'
 
 - name: Disable LLMNR
   lineinfile:
