@@ -2,7 +2,7 @@
 - name: Install cron
   apt:
     name: cron
-    state: present
+    state: latest
     install_recommends: no
 
 - name: Adjust cron default job time

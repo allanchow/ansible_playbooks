@@ -13,7 +13,7 @@
 - name: Install msr-tools
   apt:
     name: msr-tools
-    state: present
+    state: latest
     install_recommends: no
 
 - name: Blacklist affected cpu performance drivers

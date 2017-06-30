@@ -65,7 +65,7 @@
 - name: Ensure Packages are installed
   apt:
     name: "{{ item }}"
-    state: present
+    state: latest
     install_recommends: no
   with_flattened:
     - build-essential
@@ -109,7 +109,7 @@
 - name: Install vm tools if a vm
   apt:
     name: open-vm-tools
-    state: present
+    state: latest
     purge: yes
     autoremove: yes
   when: ansible_virtualization_type == "VMware"

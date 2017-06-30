@@ -2,7 +2,7 @@
 - name: Install bash-completion
   apt:
     name: bash-completion
-    state: present
+    state: latest
     install_recommends: no
 
 - name: Copy system-wide profile

@@ -58,7 +58,7 @@
 
 - apt:
     name: bc
-    state: present
+    state: latest
     install_recommends: no
 
 - name: Deploy | Nginx Files

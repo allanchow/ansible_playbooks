@@ -2,7 +2,7 @@
 - name: Install related components and using openresolv
   apt:
     name: "{{ item }}"
-    state: present
+    state: latest
     install_recommends: no
   with_items:
     - dnsutils
