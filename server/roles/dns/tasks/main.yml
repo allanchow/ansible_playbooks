@@ -84,4 +84,14 @@
     state: link
   when: systemd_resolved_conf.stat.exists == True
 
+- name: Set /etc/hosts
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+    force: yes
+    owner: root
+    group: root
+    mode: 0644
+  when: not container
+
 - meta: flush_handlers

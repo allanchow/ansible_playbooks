@@ -33,13 +33,3 @@
 - name: Set hostname
   hostname:
     name: "{{ inventory_hostname_short }}"
-
-- name: Set /etc/hosts
-  template:
-    src: hosts.j2
-    dest: /etc/hosts
-    force: yes
-    owner: root
-    group: root
-    mode: 0644
-  when: not container
