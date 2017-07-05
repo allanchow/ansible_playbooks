@@ -20,13 +20,13 @@
       - name: Env | Java - Set to use /dev/urandom
         lineinfile:
           dest: "{{ java.home }}/lib/security/java.security"
-          regexp: 'securerandom.source='
+          regexp: '^securerandom.source='
           line: 'securerandom.source=file:/dev/urandom'
           state: present
       - name: Env | Java - Set to use NativePRNGNonBlocking
         lineinfile:
           dest: "{{ java.home }}/lib/security/java.security"
-          regexp: 'securerandom.strongAlgorithms='
+          regexp: '^securerandom.strongAlgorithms='
           line: 'securerandom.strongAlgorithms=NativePRNGNonBlocking:SUN'
           state: present
       when: jvm_urandom | failed
