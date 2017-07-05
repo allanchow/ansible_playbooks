@@ -139,8 +139,8 @@ proxy_heartbeat_cdn() {
 
   $IPT -t nat -A PREROUTING -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j DNAT --to {{ heartbeat.outputs.direct.host }} -m comment --comment "heartbeat_proxy"
   $IPT -t nat -A POSTROUTING -p {{ heartbeat.outputs.direct.proto }} -d {{ heartbeat.outputs.direct.host }} --dport {{ heartbeat.outputs.direct.port }} -j SNAT --to-source {{ proxy_heartbeat_cdn.host | resolve }} -m comment --comment "heartbeat_proxy"
-  {% for ip in cdn_ips | unique %}
-  $IPT -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} -s {{ ip }} --dport {{ proxy_heartbeat_cdn.port }} -j ACCEPT -m comment --comment "heartbeat_proxy"
+  {% for rec in cdn_dns | unique %}
+  $IPT -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} -s {{ rec.ip }} --dport {{ proxy_heartbeat_cdn.port }} -j ACCEPT -m comment --comment "heartbeat_proxy"
   {% endfor %}
   $IPT -t mangle -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j TOS --set-tos Maximize-Reliability -m comment --comment "heartbeat_proxy"
   {% endif %}
