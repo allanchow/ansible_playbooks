@@ -1,5 +1,5 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
-#{{ ansible_managed }}
+# {{ ansible_managed }}
 
 # Temp - 202.53.150.9
 $IPT -A WHITELIST -s {{ 'cdn-g1-hk-06' | resolve }} -j ACCEPT -m comment --comment "cdn-g1-hk-06"

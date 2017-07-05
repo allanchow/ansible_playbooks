@@ -1,5 +1,5 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
-#{{ ansible_managed }}
+# {{ ansible_managed }}
 
 CACHESIZE={{ (ansible_memtotal_mb * 0.8) | int }}
 MAXCONN={{ memcached_maxconn }}

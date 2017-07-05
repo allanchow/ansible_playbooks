@@ -1,6 +1,6 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
 #!/bin/sh
-#{{ ansible_managed }}
+# {{ ansible_managed }}
 
 {% set notrack = ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT --notrack', '-j NOTRACK') %}
 {% set track = ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT', '-j ACCEPT') %}

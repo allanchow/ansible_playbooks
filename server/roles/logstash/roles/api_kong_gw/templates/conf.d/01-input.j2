@@ -1,5 +1,5 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
-#{{ ansible_managed }}
+# {{ ansible_managed }}
 
 input {
   {% for input in api_kong_gw.inputs.udp | default([], True) %}
