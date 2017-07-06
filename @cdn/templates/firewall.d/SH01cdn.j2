@@ -1,0 +1,6 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+# CDN
+{% set p = [ const.port.http, const.port.https ] | join(",") %}
+$IPT -A INPUT -p tcp -m multiport --dport {{ p }} -j ACCEPT -m comment --comment "cdn services"
+$IPT -t mangle -A OUTPUT -p tcp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Throughput -m comment --comment "cdn services"

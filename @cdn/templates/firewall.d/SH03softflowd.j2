@@ -1,0 +1,4 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+# Softflowd
+$IPT -t mangle -A OUTPUT -p udp --dport {{ softflowd.port }} -j TOS --set-tos Maximize-Reliability -m comment --comment "softflowd traffic"

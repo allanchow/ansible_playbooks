@@ -1,0 +1,12 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+echo 1 > /proc/sys/net/ipv4/ip_forward
+# conntrack is required if NAT is used, that's the proxy hearbeat case
+$IPT -t raw -I PREROUTING -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} $TRACK
+
+$IPT -t nat -A PREROUTING -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j DNAT --to {{ heartbeat.outputs.direct.host }} -m comment --comment "heartbeat_proxy"
+$IPT -t nat -A POSTROUTING -p {{ heartbeat.outputs.direct.proto }} -d {{ heartbeat.outputs.direct.host }} --dport {{ heartbeat.outputs.direct.port }} -j SNAT --to-source {{ proxy_heartbeat_cdn.host | resolve }} -m comment --comment "heartbeat_proxy"
+{% for rec in cdn_dns | unique %}
+$IPT -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} -s {{ rec.ip }} --dport {{ proxy_heartbeat_cdn.port }} -j ACCEPT -m comment --comment "heartbeat_proxy"
+{% endfor %}
+$IPT -t mangle -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j TOS --set-tos Maximize-Reliability -m comment --comment "heartbeat_proxy"

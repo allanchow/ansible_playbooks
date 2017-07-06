@@ -25,11 +25,11 @@
     - { role: tuned_cpu,      when: True, tags: [sys, cdn, tuning] }
     - { role: tuned_network,  when: True, tags: [sys, cdn, tuning] }
     - { role: bash,           when: True, tags: [sys, cdn, bash] }
-    - { role: softflowd,      when: True, tags: [cdn, softflowd],
+    - { role: softflowd,      when: softflowd is defined, tags: [cdn, softflowd],
         softflowd_dest_ip:    "{{ softflowd.ip }}",
         softflowd_dest_port:  "{{ softflowd.port }}"
       }
-    - { role: memcached,      when: True, tags: [cdn, memcached],
+    - { role: memcached,      when: memcached is defined, tags: [cdn, memcached],
         memcached_maxconn:    "{{ memcached.maxconn }}",
         memcached_maxslab:    "{{ memcached.max_slab_page }}",
         memcached_backlog:    "{{ memcached.backlog_queue_limit }}",
@@ -37,7 +37,7 @@
         memcached_socket:     "{{ memcached.unix.socket }}",
         memcached_user:       "{{ memcached.user}}" }
     - { role: nginx,          when: True, tags: [cdn, nginx] }
-    - { role: heartbeat,      when: True, tags: [cdn, heartbeat],
+    - { role: heartbeat,      when: heartbeat is defined, tags: [cdn, heartbeat],
         heartbeat_every_sec:  30,
         heartbeat_log_ip:     "{{ heartbeat.outputs.direct.host | resolve }}",
         heartbeat_log_port:   "{{ heartbeat.outputs.direct.port }}",
@@ -50,7 +50,17 @@
         dest: ~/speedtest.py
       tags: [cdn]
 
-    - name: iptables rules
+    - name: reset iptables rules
+      file:
+        dest: "/etc/systemd/system/firewall.d/{{ item | basename | regex_replace('[.]j2$', '') }}"
+        state: absent
+      with_fileglob:
+        - templates/firewall.d/*.j2
+      tags: [firewall]
+
+    - name: create iptables rules
+      vars:
+        proxy_heartbeat_cdn: "{{ heartbeat is defined | ternary(heartbeat.outputs.proxy | selectattr('host', 'match', '^%s' % inventory_hostname_short) | list | default([None], True) | first, 'None') }}"
       template:
         src: "{{ item }}"
         dest: "/etc/systemd/system/firewall.d/{{ item | basename | regex_replace('[.]j2$', '') }}"
@@ -58,16 +68,19 @@
         group: root
         mode: 0755
         force: yes
-      with_fileglob:
-        - templates/firewall.d/*.j2
-      register: iptable_rules
+      with_flattened:
+        - firewall.d/W01cdn-g1-hk-06.j2
+        - firewall.d/SH01cdn.j2
+        - "{{ (cdn.logstash is defined) | ternary('firewall.d/SH02logstash.j2', []) }}"
+        - "{{ (softflowd is defined) | ternary('firewall.d/SH03softflowd.j2', []) }}"
+        - "{{ (memcached.connection == 'tcp') | ternary('firewall.d/SH04memcached.j2', []) }}"
+        - "{{ proxy_heartbeat_cdn | ternary('firewall.d/SL01heartbeatproxy.j2', []) }}"
       tags: [firewall]
 
-    - name: restart iptables-rules
+    - name: restart iptables-rules.service
       systemd:
         name: iptables-rules
         state: restarted
-      when: iptable_rules | changed
       tags: [firewall]
 
 

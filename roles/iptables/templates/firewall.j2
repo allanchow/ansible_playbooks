@@ -90,25 +90,13 @@ block_bad_tcpflags() {
 
   $IPT -A INPUT -p tcp -j TCP_FLAGS
 }
-services() {
-  # CDN
-  {% set p = [ const.port.http, const.port.https ] | join(",") %}
-  $IPT -A INPUT -p tcp -m multiport --dport {{ p }} -j ACCEPT -m comment --comment "cdn services"
-  $IPT -t mangle -A OUTPUT -p tcp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Throughput -m comment --comment "cdn services"
-  {% if cdn.logstash is defined %}
-  {% set p = [ cdn.logstash.access_log.udp.port, cdn.logstash.error_log.udp.port ] | join(",") %}
-  # Logstash
-  $IPT -t mangle -A OUTPUT -p udp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Reliability -m comment --comment "logstash traffic"
-  {% endif %}
-  {% if softflowd is defined %}
-  # Softflowd
-  $IPT -t mangle -A OUTPUT -p udp --dport {{ softflowd.port }} -j TOS --set-tos Maximize-Reliability -m comment --comment "softflowd traffic"
-  {% endif %}
-  {% if memcached.connection == "tcp" %}
-  # Memcached TCP
-  $IPT -A INPUT -s {{ memcached.cluster_net }}/{{ memcached.cluster_netmask }} -j ACCEPT -m comment --comment "memcached_tcp"
-  $IPT -t mangle -A PREROUTING -s {{ memcached.cluster_net }}/{{ memcached.cluster_netmask }} -j ACCEPT -m comment --comment "memcached_tcp"
-  {% endif %}
+services_cls_high() {
+  for i in $(find $(dirname $0)/firewall.d/ -maxdepth 1 -type f -perm '-u+x' -name 'SH*' | sort);
+  do
+    echo $i
+    trap "" INT QUIT TSTP EXIT
+    . $i
+  done
 }
 ack_optimize(){
   #  http://www.funtoo.org/Traffic_Control
@@ -135,21 +123,15 @@ trusted() {
   $IPT -A INPUT -s {{ ip | resolve }} -j ACCEPT -m comment --comment "allbrightnet"
   {% endfor %}
 }
-proxy_heartbeat_cdn() {
-  {% set proxy_heartbeat_cdn = heartbeat is defined | ternary(heartbeat.outputs.proxy | selectattr("host", "match", "^%s" % inventory_hostname_short) | list | default([None], True) | first, "None") %}
-  {% if proxy_heartbeat_cdn %}
-  echo 1 > /proc/sys/net/ipv4/ip_forward
-  # conntrack is required if NAT is used, that's the proxy hearbeat case
-  $IPT -t raw -I PREROUTING -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} {{ track }}
-
-  $IPT -t nat -A PREROUTING -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j DNAT --to {{ heartbeat.outputs.direct.host }} -m comment --comment "heartbeat_proxy"
-  $IPT -t nat -A POSTROUTING -p {{ heartbeat.outputs.direct.proto }} -d {{ heartbeat.outputs.direct.host }} --dport {{ heartbeat.outputs.direct.port }} -j SNAT --to-source {{ proxy_heartbeat_cdn.host | resolve }} -m comment --comment "heartbeat_proxy"
-  {% for rec in cdn_dns | unique %}
-  $IPT -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} -s {{ rec.ip }} --dport {{ proxy_heartbeat_cdn.port }} -j ACCEPT -m comment --comment "heartbeat_proxy"
-  {% endfor %}
-  $IPT -t mangle -A FORWARD -p {{ proxy_heartbeat_cdn.proto }} --dport {{ proxy_heartbeat_cdn.port }} -j TOS --set-tos Maximize-Reliability -m comment --comment "heartbeat_proxy"
-  {% endif %}
-  echo
+services_cls_low() {
+  for i in $(find $(dirname $0)/firewall.d/ -maxdepth 1 -type f -perm '-u+x' -name 'SL*' | sort);
+  do
+    echo $i
+    trap "" INT QUIT TSTP EXIT
+    . $i
+  done
+  $IPT -A INPUT -p tcp -s 183.178.132.168 --dport {{ const.port.ssh }} -j ACCEPT -m comment --comment "Ken Home"
+  #$IPT -A INPUT -p tcp -s 183.178.132.168 --dport 8081 -j ACCEPT
 }
 udomain() {
   {% set ports = [['tcp',const.port.ssh], ['udp',const.port.snmp]] %}
@@ -213,12 +195,10 @@ do_start() {
   $IPT -A INPUT -p tcp ! --syn -j ACCEPT -m comment --comment "allow any established connections"
   $IPT -A INPUT -p icmp --icmp-type destination-unreachable -j ACCEPT -m comment --comment "icmp routing messages"
   $IPT -A INPUT -f -j DROP -m comment --comment "discard any left over fragments"
-  services
+  services_cls_high
   ack_optimize
-  proxy_heartbeat_cdn
-  $IPT -A INPUT -p tcp -s 183.178.132.168 --dport {{ const.port.ssh }} -j ACCEPT -m comment --comment "Ken Home"
-  #$IPT -A INPUT -p tcp -s 183.178.132.168 --dport 8081 -j ACCEPT
   trusted
+  services_cls_low
   #udomain
   other_tos
   allow_non_tcp

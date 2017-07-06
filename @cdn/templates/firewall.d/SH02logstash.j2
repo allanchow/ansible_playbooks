@@ -1,0 +1,5 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+{% set p = [ cdn.logstash.access_log.udp.port, cdn.logstash.error_log.udp.port ] | join(",") %}
+# Logstash
+$IPT -t mangle -A OUTPUT -p udp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Reliability -m comment --comment "logstash traffic"

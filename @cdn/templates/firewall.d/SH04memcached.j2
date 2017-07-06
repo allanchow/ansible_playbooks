@@ -1,0 +1,5 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+# Memcached TCP
+$IPT -A INPUT -s {{ memcached.cluster_net }}/{{ memcached.cluster_netmask }} -j ACCEPT -m comment --comment "memcached_tcp"
+$IPT -t mangle -A PREROUTING -s {{ memcached.cluster_net }}/{{ memcached.cluster_netmask }} -j ACCEPT -m comment --comment "memcached_tcp"
