@@ -214,8 +214,6 @@ do_start() {
   $IPT -A INPUT -p icmp --icmp-type destination-unreachable -j ACCEPT -m comment --comment "icmp routing messages"
   $IPT -A INPUT -f -j DROP -m comment --comment "discard any left over fragments"
   services
-  # loopback
-  $IPT -A INPUT -i lo -j ACCEPT -m comment --comment "loopback"
   ack_optimize
   proxy_heartbeat_cdn
   $IPT -A INPUT -p tcp -s 183.178.132.168 --dport {{ const.port.ssh }} -j ACCEPT -m comment --comment "Ken Home"
@@ -225,6 +223,8 @@ do_start() {
   other_tos
   allow_non_tcp
   whitelist
+  # loopback
+  $IPT -A INPUT -i lo -j ACCEPT -m comment --comment "loopback"
   default_rej
 }
 main() {
