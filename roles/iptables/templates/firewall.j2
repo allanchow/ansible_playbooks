@@ -112,12 +112,12 @@ services() {
 }
 ack_optimize(){
   #  http://www.funtoo.org/Traffic_Control
-  $IPT -t mangle -N ack
-  $IPT -t mangle -A ack -m tos ! --tos Normal-Service -j RETURN
-  $IPT -t mangle -A ack -p tcp -m length --length 0:128 -j TOS --set-tos Minimize-Delay
-  $IPT -t mangle -A ack -p tcp -m length --length 128: -j TOS --set-tos Maximize-Throughput
-  $IPT -t mangle -A ack -j RETURN
-  $IPT -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,RST,ACK ACK -j ack
+  $IPT -t mangle -N ACK
+  $IPT -t mangle -A ACK -m tos ! --tos Normal-Service -j RETURN
+  $IPT -t mangle -A ACK -p tcp -m length --length 0:128 -j TOS --set-tos Minimize-Delay
+  $IPT -t mangle -A ACK -p tcp -m length --length 128: -j TOS --set-tos Maximize-Throughput
+  $IPT -t mangle -A ACK -j RETURN
+  $IPT -t mangle -A POSTROUTING -p tcp -m tcp --tcp-flags SYN,RST,ACK ACK -j ACK
 }
 whitelist() {
   $IPT -N WHITELIST
