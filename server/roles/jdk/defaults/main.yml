@@ -1,0 +1,4 @@
+---
+jdk_version: 8
+jre_only: True
+jdk_upgradable: False

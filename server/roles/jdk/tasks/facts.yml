@@ -1,0 +1,62 @@
+---
+- name: Set operation variables
+  set_fact:
+    jdk_arch: linux-x64
+    jdk_ext: .tar.gz
+    jdk_vendor_url: http://www.oracle.com
+    jdk_url: /technetwork/java/javase/downloads/index.html
+    curl_cmd: >-
+      {%- set tmp = ['curl', '-s', "-A '%s'" % http_user_agent] -%}
+      {%- for h in http_headers -%}
+      {{ tmp.append("-H '%s'" % h) }}
+      {%- endfor -%}
+      {{ tmp | join(' ') }}
+  vars:
+    http_user_agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36
+    http_headers:
+      - 'Accept-Language: "en-US,en;q=0.8"'
+
+# ref: https://gist.github.com/n0ts/40dd9bd45578556f93e7
+- name: Get JDK url
+  vars:
+    jdk_dl_url: "{{ jdk_vendor_url }}{{ jdk_url }}"
+  shell: >-
+    {{ curl_cmd }} {{ jdk_dl_url }} | egrep -o "/technetwork/java/javase/downloads/{{ pkg }}{{ jdk_version }}-downloads-.+?\.html" | head -1 | cut -d '"' -f 1
+  changed_when: False
+  register: jdk_url_out
+  failed_when: jdk_url_out.stdout | trim == ""
+
+- name: Get JDK binary url
+  shell: >
+    {{ curl_cmd }} {{ jdk_vendor_url }}{{ jdk_url_out.stdout }} | egrep -o "https?://(.*)/otn-pub/java/jdk/{{ jdk_version }}u[0-9]+\-(.*)+/{{ pkg }}-{{ jdk_version }}u[0-9]+(.*){{ jdk_arch }}{{ jdk_ext }}" | sort
+  changed_when: False
+  register: jdk_bin_url_out
+  failed_when: jdk_bin_url_out.stdout | trim == ""
+
+- name: Set JDK facts
+  set_fact:
+    jdk_tar_file:     "{{ jdk_file }}{{ jdk_ext }}"
+    jdk_tar_file_url: "{{ jdk_bin_url_out.stdout_lines | first }}"
+    jdk_filename:     "{{ jdk_file }}"
+    jdk_dev_ver:      "1{{ jdk_version }}0"
+    jdk_dev_subver:   "{{ jdk_file | regex_replace('^%s-%su([0-9]+)-.*' % (pkg, jdk_version), '\\1') }}"
+  vars:
+    jdk_file: "{{ jdk_bin_url_out.stdout_lines | first | regex_replace('https?://.*/([^/]+)%s' % jdk_ext, '\\1') }}"
+  failed_when: jdk_file | trim == ""
+
+- name: Get JDK checksum url
+  shell: >-
+    {{ curl_cmd }} {{ jdk_vendor_url }}{{ jdk_url_out.stdout }} | egrep -o "https?://.*/webfolder/s/digest/{{ jdk_version }}u[0-9]+checksum\.html" | head -1 | cut -d '"' -f 1
+  changed_when: False
+  register: jdk_checksum_url_out
+
+- name: Get JDK sha256 checksum
+  shell: >-
+    {{ curl_cmd }} {{ jdk_checksum_url_out.stdout }} | egrep -io '>{{ jdk_tar_file }}.*sha256: [a-z0-9]+' | egrep -o '[a-z0-9]+$'
+  changed_when: False
+  register: jdk_checksum_out
+  failed_when: jdk_checksum_out.stdout | trim == ""
+
+- name: Set JDK checksum facts
+  set_fact:
+    jdk_checksum: "{{ jdk_checksum_out.stdout }}"

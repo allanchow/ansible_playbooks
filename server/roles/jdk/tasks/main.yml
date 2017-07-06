@@ -1,0 +1,114 @@
+---
+- set_fact:
+    pkg: "{{ jre_only | ternary('jre', 'jdk') }}"
+
+- name: Get JDK installed location
+  shell: "readlink -e $(which java) 2>&1 2>/dev/null | egrep -o '^/usr/local/{{ pkg }}-'"
+  changed_when: False
+  register: jdk_loc
+  ignore_errors: True
+
+- name: Get Java version
+  shell: java -version 2>&1 | head -1 | tr -d '.' | egrep -o "[0-9]+(_[0-9]+)?"
+  changed_when: False
+  register: jdk_installed_ver_out
+  when: jdk_loc | succeeded
+
+- set_fact:
+    jdk_is_installed: "{{ jdk_installed_ver_out.stdout | d('') | trim != '' }}"
+    java_home: "/usr/local/{{ pkg }}"
+
+- block:
+
+  - include: facts.yml
+  - set_fact:
+      jdk_avail_upgrad: "{{ (jdk_dev_ver | int > jdk_installed_ver | int) or
+                        (jdk_dev_ver == jdk_installed_ver and jdk_dev_subver | int > jdk_installed_subver  | int) }}"
+    vars:
+      jdk_installed_ver: "{{ (jdk_installed_ver_out.stdout | d(0) | lower).split('_')[0] }}"
+      jdk_installed_subver: "{{ (jdk_installed_ver_out.stdout | d(0) | lower).split('_')[1] | d(0) }}"
+
+  - block:
+
+    - stat:
+        path: "/usr/local/{{ jdk_tar_file }}"
+        checksum_algorithm: sha256
+      register: jdk_file
+
+    - name: Get JDK binary
+      get_url:
+        url: "{{ jdk_tar_file_url }}"
+        dest: /usr/local/
+        validate_certs: no
+        http_agent: "{{ http_user_agent }}"
+        headers: "Cookie: oraclelicense=accept-securebackup-cookie"
+        force: no
+        checksum: "sha256:{{ jdk_checksum }}"
+      when: (jdk_file.stat.exists == False or jdk_file.stat.checksum != jdk_checksum)
+
+    when: jdk_avail_upgrad
+
+  - name: Ensure directories
+    file: path="/usr/local/{{ jdk_filename }}" state=directory mode=0755 owner=root group=root
+
+  - name: Unarchive JDK
+    unarchive:
+      src: "/usr/local/{{ jdk_tar_file }}"
+      dest: "/usr/local/{{ jdk_filename }}"
+      remote_src: True
+      owner: root
+      group: root
+      keep_newer: True
+      extra_opts: ['--strip-components=1']
+
+  - set_fact:
+      bin_links: "{{ jre_only | ternary(['java'], ['java', 'javac', 'jar']) }}"
+
+  - name: "Link to /usr/local/{{ jdk_filename }}"
+    file:
+      dest: "{{ java_home }}"
+      src: "{{ jdk_filename }}"
+      state: link
+      force: yes
+
+  - name: alternatives links for Java
+    alternatives:
+      name: java
+      link: /usr/bin/java
+      path: "/usr/local/{{ jdk_filename }}/bin/java"
+      priority: 10
+    with_items: bin_links
+
+  when: jdk_upgradable or not jdk_is_installed
+
+- name: Make sure /etc/profile.d exists
+  file: path=/etc/profile.d state=directory owner=root group=root mode='u=rwx,go=rx'
+
+- name: Export JAVA_HOME
+  template:
+    src:  java_home.sh.j2
+    dest: /etc/profile.d/java_home.sh
+    owner: root
+    group: root
+    mode: "a+x"
+
+- name: Avoiding JVM Delays Caused by Random Number Generation
+# https://docs.oracle.com/cd/E13209_01/wlcp/wlss30/configwlss/jvmrand.html
+  command: timeout 5 head -n 1 /dev/random
+  ignore_errors: yes
+  register: jvm_urandom
+
+- block:
+  - name: Java - Set to use /dev/urandom
+    lineinfile:
+      dest: "{{ java_home }}/lib/security/java.security"
+      regexp: '^securerandom.source='
+      line: 'securerandom.source=file:/dev/urandom'
+      state: present
+  - name: Java - Set to use NativePRNGNonBlocking
+    lineinfile:
+      dest: "{{ java_home }}/lib/security/java.security"
+      regexp: '^securerandom.strongAlgorithms='
+      line: 'securerandom.strongAlgorithms=NativePRNGNonBlocking:SUN'
+      state: present
+  when: jvm_urandom | failed

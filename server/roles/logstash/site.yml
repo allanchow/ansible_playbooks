@@ -10,26 +10,6 @@
   gather_facts: false
 
   pre_tasks:
-    - name: Env | Avoiding JVM Delays Caused by Random Number Generation
-    # https://docs.oracle.com/cd/E13209_01/wlcp/wlss30/configwlss/jvmrand.html
-      command: timeout 5 head -n 1 /dev/random
-      ignore_errors: yes
-      register: jvm_urandom
-
-    - block:
-      - name: Env | Java - Set to use /dev/urandom
-        lineinfile:
-          dest: "{{ java.home }}/lib/security/java.security"
-          regexp: '^securerandom.source='
-          line: 'securerandom.source=file:/dev/urandom'
-          state: present
-      - name: Env | Java - Set to use NativePRNGNonBlocking
-        lineinfile:
-          dest: "{{ java.home }}/lib/security/java.security"
-          regexp: '^securerandom.strongAlgorithms='
-          line: 'securerandom.strongAlgorithms=NativePRNGNonBlocking:SUN'
-          state: present
-      when: jvm_urandom | failed
 
     # - name: Env | CPU support rdrand
     #   shell: cat /proc/cpuinfo | grep rdrand > /dev/null && echo 1 || echo 0
