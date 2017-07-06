@@ -25,7 +25,7 @@
     - { role: iptables,       when: True, tags: [cdn, firewall] }
     - { role: tuned_cpu,      when: True, tags: [sys, cdn, tuning] }
     - { role: tuned_network,  when: True, tags: [sys, cdn, tuning] }
-    - { role: bash,           when: True, tags: [sys, cdn] }
+    - { role: bash,           when: True, tags: [sys, cdn, bash] }
     - { role: softflowd,      when: True, tags: [cdn, softflowd],
         softflowd_dest_ip:    "{{ softflowd.ip }}",
         softflowd_dest_port:  "{{ softflowd.port }}"
