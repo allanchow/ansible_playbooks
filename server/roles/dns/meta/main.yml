@@ -1,3 +1,4 @@
 ---
 dependencies:
+  - { role: +requirements }
   - { role: +build_cdn_ip_list }
