@@ -49,15 +49,7 @@ ipv4:
     - 248.0.0.0/5
     # Broadcast
     - 255.255.255.255/32
-const:
-  port:
-    ssh: 22
-    snmp: 161
-    http: 80
-    https: 443
-    domain: 53
-    ntp: 123
-    nrpe: 5666
+
 #cdn_suffix: .allbrightnetwork.com
 softflowd:
   ip: "{{ logstash.vip.prod }}"

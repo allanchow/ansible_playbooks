@@ -1,0 +1,10 @@
+---
+const:
+  port:
+    ssh: 22
+    snmp: 161
+    http: 80
+    https: 443
+    domain: 53
+    ntp: 123
+    nrpe: 5666
