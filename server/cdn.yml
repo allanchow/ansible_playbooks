@@ -1,36 +1,48 @@
 #!/usr/bin/env ansible-playbook
-- include: python2.yml
 - hosts: "{{ inv }}"
   #strategy: free
   become_method: sudo
   become: yes
-  #vars:
-  # deploy_file_path: "{{ deployment_path }}"
+
   pre_tasks:
-    - include: init.yml
+    - include: requirements.yml
+    - include: facts.yml
 
   roles:
-    - { role: locales,        tags: [sys, cdn, locales] }
-    - { role: ntp,            tags: [sys, cdn, ntp] }
-    - { role: cron,           tags: [sys, cdn, cron] }
-    - { role: dns,            tags: [cdn, dns] }
-    - { role: apt,            tags: [sys, cdn, apt] }
-    - { role: hostname,       tags: [sys, cdn, hostname] }
-    - { role: syspkg,         tags: [sys, cdn, syspkg] }
-    - { role: grub,           tags: [sys, cdn, grub] }
-    - { role: sshd,           tags: [sys, cdn, sshd] }
-    - { role: unload_drivers, tags: [sys, cdn] }
-    - { role: rc.local,       tags: [sys, cdn, rc] }
-    - { role: pamd,           tags: [sys, cdn] }
-    - { role: services,       tags: [sys, cdn] }
-    - { role: iptables,       tags: [cdn, firewall] }
-    - { role: tuned_cpu,      tags: [sys, cdn, tuning] }
-    - { role: tuned_network,  tags: [sys, cdn, tuning] }
-    - { role: bash,           tags: [sys, cdn] }
-    - { role: softflowd,      tags: [cdn, softflowd] }
-    - { role: memcached,      tags: [cdn, memcached] }
-    - { role: nginx,          tags: [cdn, nginx] }
-    - { role: heartbeat,      tags: [cdn, heartbeat] }
+    - { role: locales,        when: True, tags: [sys, cdn, locales] }
+    - { role: ntp,            when: True, tags: [sys, cdn, ntp] }
+    - { role: cron,           when: True, tags: [sys, cdn, cron] }
+    - { role: dns,            when: True, tags: [cdn, dns] }
+    - { role: apt,            when: True, tags: [sys, cdn, apt] }
+    - { role: hostname,       when: True, tags: [sys, cdn, hostname] }
+    - { role: syspkg,         when: True, tags: [sys, cdn, syspkg] }
+    - { role: grub,           when: True, tags: [sys, cdn, grub] }
+    - { role: sshd,           when: True, tags: [sys, cdn, sshd] }
+    - { role: unload_drivers, when: True, tags: [sys, cdn] }
+    - { role: rc.local,       when: True, tags: [sys, cdn, rc] }
+    - { role: pamd,           when: True, tags: [sys, cdn] }
+    - { role: services,       when: True, tags: [sys, cdn] }
+    - { role: iptables,       when: True, tags: [cdn, firewall] }
+    - { role: tuned_cpu,      when: True, tags: [sys, cdn, tuning] }
+    - { role: tuned_network,  when: True, tags: [sys, cdn, tuning] }
+    - { role: bash,           when: True, tags: [sys, cdn] }
+    - { role: softflowd,      when: True, tags: [cdn, softflowd],
+        softflowd_dest_ip:    "{{ softflowd.ip }}",
+        softflowd_dest_port:  "{{ softflowd.port }}"
+      }
+    - { role: memcached,      when: True, tags: [cdn, memcached],
+        memcached_maxconn:    "{{ memcached.maxconn }}",
+        memcached_maxslab:    "{{ memcached.max_slab_page }}",
+        memcached_backlog:    "{{ memcached.backlog_queue_limit }}",
+        memcached_tcp:        False,
+        memcached_socket:     "{{ memcached.unix.socket }}",
+        memcached_user:       "{{ memcached.user}}" }
+    - { role: nginx,          when: True, tags: [cdn, nginx] }
+    - { role: heartbeat,      when: True, tags: [cdn, heartbeat],
+        heartbeat_every_sec:  30,
+        heartbeat_log_ip:     "{{ heartbeat.outputs.direct.host | resolve }}",
+        heartbeat_log_port:   "{{ heartbeat.outputs.direct.port }}",
+        heartbeat_log_proxy:  "{{ heartbeat.outputs.proxy }}" }
 
   tasks:
     - name: speedtest
