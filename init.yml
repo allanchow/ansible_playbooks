@@ -1,3 +1,4 @@
+#!/usr/bin/env ansible-playbook
 ---
 - hosts: "{{ inv }}"
   gather_facts: False
