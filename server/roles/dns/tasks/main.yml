@@ -28,6 +28,13 @@
     owner: root
     group: root
     mode: 0644
+  register: ifup_remove
+
+- name: Restart networking conditionally
+  systemd:
+    name: networking
+    state: restarted
+  when: ifup_remove | changed
 
 - name: Ensure /etc/resolvconf/resolv.conf.d/
   file: path=/etc/resolvconf/resolv.conf.d state=directory
