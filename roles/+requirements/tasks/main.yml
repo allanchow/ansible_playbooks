@@ -5,4 +5,3 @@
           and ansible_lsb.major_release|int >= 16
           and ansible_lsb.description | search(' LTS')
           and ansible_architecture == 'x86_64')
-  tags: always
