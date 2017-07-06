@@ -4,8 +4,8 @@
   become_method: sudo
   become: yes
 
-  pre_tasks:
-    - include: facts.yml
+  #pre_tasks:
+#    - include: facts.yml
 
   roles:
     - { role: locales,        when: True, tags: [sys, cdn, locales] }
