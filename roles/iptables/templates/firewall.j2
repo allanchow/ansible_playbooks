@@ -2,8 +2,8 @@
 #!/bin/sh
 # {{ ansible_managed }}
 
-{% set notrack = ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT --notrack', '-j NOTRACK') %}
-{% set track = ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT', '-j ACCEPT') %}
+NOTRACK="{{ ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT --notrack', '-j NOTRACK') }}"
+TRACK="{{ ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT', '-j ACCEPT') }}"
 
 LOGOPT="-m limit --limit 15/minute --log-uid --log-level 7"
 IPT=/sbin/iptables
@@ -171,12 +171,12 @@ other_tos() {
 }
 allow_non_tcp() {
   {% set p = [ const.port.domain, const.port.ntp ] | join(",") %}
-  #$IPT -t raw -I PREROUTING -p udp -m multiport --sport {{ p }} {{ track }}
+  #$IPT -t raw -I PREROUTING -p udp -m multiport --sport {{ p }} $TRACK
   $IPT -A INPUT -p udp -m multiport --sport {{ p }} -m limit --limit 3/second -j ACCEPT -m comment --comment "dns, ntp responses"
   #$IPT -A INPUT -p udp -m multiport --sport {{ p }} -m state --state ESTABLISHED -j ACCEPT -m comment --comment "dns, ntp responses"
   # ICMP
   $IPT -A INPUT -p icmp -m icmp --icmp-type echo-request -m limit --limit 3/second -j ACCEPT -m comment --comment "icmp"
-  #$IPT -t raw -I PREROUTING -p icmp -m icmp --icmp-type echo-reply {{ track }}
+  #$IPT -t raw -I PREROUTING -p icmp -m icmp --icmp-type echo-reply $TRACK
   $IPT -A INPUT -p icmp -m icmp --icmp-type echo-reply -m limit --limit 3/second -j ACCEPT -m comment --comment "icmp responses"
   #$IPT -A INPUT -p icmp -m icmp --icmp-type echo-reply -m state --state ESTABLISHED,RELATED -j ACCEPT -m comment --comment "icmp responses"
 }
@@ -193,8 +193,8 @@ default_rej() {
 }
 stateless_fw() {
   # Stateless firewall!
-  $IPT -t raw -I PREROUTING {{ notrack }}
-  $IPT -t raw -I OUTPUT {{ notrack }}
+  $IPT -t raw -I PREROUTING $NOTRACK
+  $IPT -t raw -I OUTPUT $NOTRACK
 }
 start6() {
   $IPT6 -A INPUT ! -i lo -d localhost -j DROP -m comment --comment "block dos attack"
