@@ -122,7 +122,12 @@ ack_optimize(){
 whitelist() {
   $IPT -N WHITELIST
   $IPT -A INPUT -j WHITELIST -m comment --comment "whitelist"
-  . $(dirname $0)/firewall.d/whitelist  
+  for i in $(find $(dirname $0)/firewall.d/ -maxdepth 1 -type f -perm '-u+x' -name 'W*' | sort);
+  do
+    echo $i
+    trap "" INT QUIT TSTP EXIT
+    . $i
+  done
 }
 allows() {
   # Office
