@@ -1,4 +1,5 @@
 ---
 dependencies:
   - { role: +requirements }
+  - { role: +facts }
   - { role: +build_cdn_ip_list }
