@@ -133,19 +133,6 @@ services_cls_low() {
   $IPT -A INPUT -p tcp -s 183.178.132.168 --dport {{ const.port.ssh }} -j ACCEPT -m comment --comment "Ken Home"
   #$IPT -A INPUT -p tcp -s 183.178.132.168 --dport 8081 -j ACCEPT
 }
-udomain() {
-  {% set ports = [['tcp',const.port.ssh], ['udp',const.port.snmp]] %}
-  {% if memcached.connection == "tcp" %}
-  {{ ports.append(['tcp', memcached.tcp.cluster_port]) }}
-  {% endif %}
-
-  $IPT -A INPUT -s 10.1.0.0/16 -j ACCEPT -m comment --comment "UDomain"
-  {% for ip in ipv4.udomain | default([])%}
-  {% for p in ports %}
-  $IPT -A INPUT -p {{ p[0] }} -s {{ ip | resolve }} --dport {{ p[1] }} -j ACCEPT -m comment --comment "UDomain"
-  {% endfor %}
-  {% endfor %}
-}
 other_tos() {
   $IPT -t mangle -A OUTPUT -p udp --dport {{ const.port.ntp }} -j TOS --set-tos Minimize-Cost
   $IPT -t mangle -A OUTPUT -p udp --dport {{ const.port.domain }} -j TOS --set-tos Maximize-Reliability
@@ -199,7 +186,6 @@ do_start() {
   ack_optimize
   trusted
   services_cls_low
-  #udomain
   other_tos
   allow_non_tcp
   whitelist
