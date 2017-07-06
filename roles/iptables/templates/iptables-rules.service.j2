@@ -6,7 +6,7 @@ Description=Iptables Rules
 After=syslog.target network.target remote-fs.target nss-lookup.target
 ConditionFileIsExecutable=/sbin/iptables
 ConditionFileIsExecutable=/sbin/ip6tables
-ConditionFileNotEmpty=/etc/systemd/system/firewall.sh
+ConditionFileNotEmpty=/etc/systemd/system/firewall
 
 [Service]
 Type=oneshot
