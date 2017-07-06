@@ -50,13 +50,16 @@ if __name__ == '__main__':
     try:
         if not dryrun:
             sock.bind(server_address)
+
+
+        __script_path = os.path.dirname(os.path.realpath(__file__))
         ansible_extra_vars = ['-e %s=%s' % (k, v) for k, v in env.__dict__.iteritems()]
         ansible_extra_vars.append('-e dryrun=%s' % dryrun)
-        import subprocess
+        import subprocess        
         env = os.environ
         env.update({'PATH': '%s:/usr/bin:/bin:/sbin:/usr/local/bin' % env['PATH']})
-        __script_path = os.path.dirname(os.path.realpath(__file__))
-        subprocess.call(["/usr/bin/env", "ansible-playbook", "%s/%s" % (__script_path, "autoconf/main.yml")] + ansible_extra_vars + __pargs[1], cwd=__script_path, env=env)
+        subprocess.call(["/usr/bin/env", "ansible-playbook", "%s/%s" % (__script_path, "main.yml")] + ansible_extra_vars + __pargs[1], cwd=__script_path, env=env)
+        #print(["/usr/bin/env", "ansible-playbook", "%s/%s" % (__script_path, "main.yml")] + ansible_extra_vars + __pargs[1])
         sock.close()
     except socket.error:
         sys.stderr.write('Only one Playbook instance can be running / port %s cannot be bind\n' % port)
