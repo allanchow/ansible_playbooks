@@ -129,7 +129,7 @@ whitelist() {
     . $i
   done
 }
-allows() {
+trusted() {
   # Office
   {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 %}
   $IPT -A INPUT -s {{ ip | resolve }} -j ACCEPT -m comment --comment "allbrightnet"
@@ -217,10 +217,10 @@ do_start() {
   # loopback
   $IPT -A INPUT -i lo -j ACCEPT -m comment --comment "loopback"
   ack_optimize
-  allows
   proxy_heartbeat_cdn
   $IPT -A INPUT -p tcp -s 183.178.132.168 --dport {{ const.port.ssh }} -j ACCEPT -m comment --comment "Ken Home"
   #$IPT -A INPUT -p tcp -s 183.178.132.168 --dport 8081 -j ACCEPT
+  trusted
   #udomain
   other_tos
   allow_non_tcp
