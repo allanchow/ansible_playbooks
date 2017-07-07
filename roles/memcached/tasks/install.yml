@@ -1,0 +1,51 @@
+---
+- name: Add memcached user
+  user:
+    name: "{{ memcached_user }}"
+    comment: "Memcached Service User"
+    createhome: no
+    shell: /usr/bin/nologin
+    state: present
+    system: yes
+
+- name: Copy memcached
+  copy:
+    src: memcached
+    dest: "{{ base_root }}/bin"
+    force: yes
+    mode: 0755
+    owner: root
+    group: root
+
+- name: Generate memcached config
+  vars:
+    via: "{{ memcached_tcp | ternary('-p %s -l %s' % (memcached_tcp_port, memcached_tcp_ip), '-a 775 -s %s' % memcached_socket) }}"
+  template:
+    src: "{{ item }}"
+    dest: "/etc/default/{{ item | regex_replace('[.]j2$', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - memcached.j2
+  register: memcached_cfg
+
+- name: Generate memcached.service
+  template:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item | regex_replace('[.]j2$', '') }}"
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  with_items:
+    - memcached.service.j2
+  register: memcached_srv
+
+- name: Ensure memcached is running and enabled as configured.
+  systemd:
+    name: memcached.service
+    state: "{{ (memcached_cfg | changed or memcached_srv | changed) | ternary('restarted', 'started') }}"
+    daemon_reload: yes
+    enabled: yes

@@ -1,0 +1,17 @@
+---
+- name: Stop memcached
+  systemd:
+    name: memcached.service
+    state: stopped
+    enabled: no
+    daemon_reload: yes
+  ignore_errors: True
+
+- name: Uninstall memcached
+  file:
+    dest: "{{ item }}"
+    state: absent
+  with_items:
+    - "{{ base_root }}/bin/memcached"
+    - /etc/default/memcached
+    - /etc/systemd/system/memcached.service
