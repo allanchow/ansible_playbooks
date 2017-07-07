@@ -79,7 +79,7 @@
       with_flattened:
         - firewall.d/W01cdn-g1-hk-06.j2
         - firewall.d/SH01cdn.j2
-        - "{{ (cdn.logstash is defined) | ternary('firewall.d/SH02logstash.j2', []) }}"
+        - "{{ (cdn is defined and cdn.logstash is defined) | ternary('firewall.d/SH02logstash.j2', []) }}"
         - "{{ (softflowd is defined) | ternary('firewall.d/SH03softflowd.j2', []) }}"
         - "{{ (memcached.connection == 'tcp') | ternary('firewall.d/SH04memcached.j2', []) }}"
         - "{{ proxy_heartbeat_cdn | ternary('firewall.d/SL01heartbeatproxy.j2', []) }}"
