@@ -8,8 +8,8 @@
 #    - include: facts.yml
   pre_tasks:
     - set_fact:
-        is_heartbeat_enabled: "{{ mode == 'prod' and heartbeat is defined }}"
-        is_softflowd_enabled: "{{ mode == 'prod' and softflowd is defined }}"
+        is_heartbeat_enabled: "{{ mode | d('') == 'prod' and heartbeat is defined }}"
+        is_softflowd_enabled: "{{ mode | d('') == 'prod' and softflowd is defined }}"
       tags: always
 
   roles:
