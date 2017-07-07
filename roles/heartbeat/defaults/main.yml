@@ -1,5 +1,5 @@
 ---
-heartbeat_enabled: mode == 'prod'
+heartbeat_enabled: True
 heartbeat_every_sec: 60
 heartbeat_monitor_port: 80
 heartbeat_log_ip: 127.0.0.1

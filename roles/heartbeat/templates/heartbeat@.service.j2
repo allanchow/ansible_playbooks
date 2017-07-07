@@ -14,10 +14,10 @@ IOSchedulingClass=3
 IOSchedulingPriority=7
 ExecStart=/bin/sh -c " \
 host=$$(hostname); \
-status=$$(/bin/nc -w 10 -z 127.0.0.1 {{ heartbeat_monitor_port }} && echo 'alive' || echo 'dead'); \
-{{ base_root }}/bin/logger -P {{ heartbeat_log_port }} -n {{ heartbeat_log_ip }} --rfc3164 '{\"host\":\"'$${host}'\", \"http\":\"'$${status}'\", \"channel\":\"direct\"}'; \
+status=$$(/bin/nc -w 10 -z 127.0.0.1 %i && echo 'alive' || echo 'dead'); \
+{{ base_root }}/bin/logger -P {{ heartbeat_log_port }} -n {{ heartbeat_log_ip }} --rfc3164 '{\"host\":\"'$${host}'\", \"port\":%i, \"status\":\"'$${status}'\", \"channel\":\"direct\"}'; \
 {% for h in heartbeat_log_proxy | default([]) %}
-{{ base_root }}/bin/logger -P {{ h.port }} -n {{ h.host | resolve }} --rfc3164 '{\"host\":\"'$${host}'\", \"http\":\"'$${status}'\", \"channel\":\"proxy\"}'; \
+{{ base_root }}/bin/logger -P {{ h.port }} -n {{ h.host | resolve }} --rfc3164 '{\"host\":\"'$${host}'\", \"port\":%i, \"status\":\"'$${status}'\", \"channel\":\"proxy\"}'; \
 {% endfor %}
 "
 StandardOutput=null

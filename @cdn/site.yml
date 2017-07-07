@@ -6,6 +6,10 @@
 
   #pre_tasks:
 #    - include: facts.yml
+  pre_tasks:
+    - set_fact:
+        is_heartbeat_enabled: "{{ mode == 'prod' and heartbeat is defined }}"
+      tags: always
 
   roles:
     - { role: locales,        when: True, tags: [sys, cdn, locales] }
@@ -37,8 +41,10 @@
         memcached_socket:     "{{ memcached.unix.socket }}",
         memcached_user:       "{{ memcached.user}}" }
     - { role: nginx,          when: True, tags: [cdn, nginx] }
-    - { role: heartbeat,      when: heartbeat is defined, tags: [cdn, heartbeat],
+    - { role: heartbeat,      when: True, tags: [cdn, heartbeat],
+        heartbeat_enabled:    "{{ is_heartbeat_enabled | bool }}",
         heartbeat_every_sec:  30,
+        heartbeat_monitor_port: 80,
         heartbeat_log_ip:     "{{ heartbeat.outputs.direct.host | resolve }}",
         heartbeat_log_port:   "{{ heartbeat.outputs.direct.port }}",
         heartbeat_log_proxy:  "{{ heartbeat.outputs.proxy }}" }

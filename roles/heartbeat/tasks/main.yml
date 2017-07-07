@@ -1,36 +1,6 @@
 ---
-- name: Copy logger
-  copy:
-    src: logger
-    dest: "{{ base_root }}/bin"
-    force: yes
-    mode: 0755
-    owner: root
-    group: root
+- include: install.yml
+  when: heartbeat_enabled | bool
 
-- name: Ensure nc persent
-  apt:
-    name: netcat-openbsd
-    state: latest
-    install_recommends: no
-
-- name: Generate heartbeat.timer and heartbeat.service
-  vars:
-    service_name: Server HeartBeat
-  template:
-    src: "{{ item }}"
-    dest: "/etc/systemd/system/{{ item | basename | regex_replace('[.]j2$', '') }}"
-    owner: root
-    group: root
-    mode: 0644
-    force: yes
-  with_fileglob:
-    - templates/*.j2
-
-- name: Ensure heartbeat is running and enabled as configured.
-  systemd:
-    name: heartbeat.timer
-    state: restarted
-    daemon_reload: yes
-    enabled: yes
-  when: heartbeat_enabled
+- include: uninstall.yml
+  when: not heartbeat_enabled | bool

@@ -1,0 +1,23 @@
+---
+- name: "Stop heartbeat@{{ heartbeat_monitor_port }}.timer"
+  systemd:
+    name: heartbeat@{{ heartbeat_monitor_port }}.timer
+    state: stopped
+    enabled: no
+    daemon_reload: yes
+  ignore_errors: True
+
+- name: Check any active instance of heartbeat timers
+  shell: systemctl list-units -t timer | grep heartbeat | wc -l
+  changed_when: False
+  register: any_heartbeat_timer
+
+- name: Uninstall heartbeat
+  file:
+    dest: "{{ item }}"
+    state: absent
+  with_items:
+    - "{{ base_root }}/bin/logger"
+    - /etc/systemd/system/heartbeat@.timer
+    - /etc/systemd/system/heartbeat@.service
+  when: any_heartbeat_timer.stdout | int == 0
