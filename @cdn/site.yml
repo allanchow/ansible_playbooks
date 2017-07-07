@@ -7,9 +7,11 @@
   #pre_tasks:
 #    - include: facts.yml
   pre_tasks:
+
     - set_fact:
         is_heartbeat_enabled: "{{ mode | d('') == 'prod' and heartbeat is defined }}"
         is_softflowd_enabled: "{{ mode | d('') == 'prod' and softflowd is defined }}"
+        is_cdn:               True
       tags: always
 
   roles:
@@ -35,14 +37,17 @@
         softflowd_dest_ip:    "{{ softflowd.ip }}",
         softflowd_dest_port:  "{{ softflowd.port }}"
       }
-    - { role: memcached,      when: memcached is defined, tags: [cdn, memcached],
+    - { role: memcached,      when: True, tags: [cdn, memcached],
+        memcached_enabled:    "{{ is_cdn | bool }}",
         memcached_maxconn:    "{{ memcached.maxconn }}",
         memcached_maxslab:    "{{ memcached.max_slab_page }}",
         memcached_backlog:    "{{ memcached.backlog_queue_limit }}",
         memcached_tcp:        False,
         memcached_socket:     "{{ memcached.unix.socket }}",
         memcached_user:       "{{ memcached.user}}" }
-    - { role: nginx,          when: True, tags: [cdn, nginx] }
+    - { role: nginx,          when: True, tags: [cdn, nginx],
+        nginx_enabled:        "{{ is_cdn | bool }}",
+      }
     - { role: heartbeat,      when: True, tags: [cdn, heartbeat],
         heartbeat_enabled:    "{{ is_heartbeat_enabled | bool }}",
         heartbeat_every_sec:  30,
