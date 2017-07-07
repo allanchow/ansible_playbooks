@@ -1,12 +1,17 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
 # {{ ansible_managed }}
 
-# Temp - 202.53.150.9
+# Temp - act as a office proxy (202.53.150.9)
 $IPT -A WHITELIST -s {{ 'cdn-g1-hk-06' | resolve }} -j ACCEPT -m comment --comment "cdn-g1-hk-06"
 
-{% if inventory_hostname_short == 'cdn-g1-hk-06' and cdn.logstash is defined %}
-{% set p = [ cdn.logstash.access_log.udp.port, cdn.logstash.error_log.udp.port ] | join(",") %}
-{% for ip in cdn_ips | unique %}
-$IPT -A WHITELIST -p udp -s {{ ip }} -m multiport --dport {{ p }} -j ACCEPT -m comment --comment "logstash temp"
+{% if inventory_hostname_short == 'cdn-g1-hk-06' %}
+# Temp - act as a logstash proxy
+{% for rec in cdn_dns | unique %}
+{% set h = hostvars[rec.name] %}
+# {{ rec.name }}
+{% set p = [ h.cdn.logstash.access_log.udp.port, h.cdn.logstash.error_log.udp.port ] | join(",") %}
+$IPT -A WHITELIST -p udp -s {{ rec.ip }} -m multiport --dport {{ p }} -j ACCEPT -m comment --comment "logstash temp"
+$IPT -t mangle -A OUTPUT -p udp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Reliability -m comment --comment "logstash traffic"
 {% endfor %}
+
 {% endif %}
