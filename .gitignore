@@ -1,2 +1,4 @@
 *.retry
-
+*.bak*
+*.log
+*.pyc
