@@ -9,6 +9,7 @@
   pre_tasks:
     - set_fact:
         is_heartbeat_enabled: "{{ mode == 'prod' and heartbeat is defined }}"
+        is_softflowd_enabled: "{{ mode == 'prod' and softflowd is defined }}"
       tags: always
 
   roles:
@@ -29,7 +30,8 @@
     - { role: tuned_cpu,      when: True, tags: [sys, cdn, tuning] }
     - { role: tuned_network,  when: True, tags: [sys, cdn, tuning] }
     - { role: bash,           when: True, tags: [sys, cdn, bash] }
-    - { role: softflowd,      when: softflowd is defined, tags: [cdn, softflowd],
+    - { role: softflowd,      when: True, tags: [cdn, softflowd],
+        softflowd_enabled:    "{{ is_softflowd_enabled | bool }}",
         softflowd_dest_ip:    "{{ softflowd.ip }}",
         softflowd_dest_port:  "{{ softflowd.port }}"
       }
