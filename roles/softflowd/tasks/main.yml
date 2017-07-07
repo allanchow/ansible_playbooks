@@ -1,38 +1,6 @@
 ---
-- name: Copy softflowd
-  copy:
-    src: "{{ item }}"
-    dest: "{{ base_root }}/bin"
-    force: yes
-    mode: 0755
-    owner: root
-    group: root
-  with_items:
-    - softflowd
-    - softflowctl
+- include: install.yml
   when: softflowd_enabled
 
-- name: Generate softflowd.service
-  vars:
-    send_log: "{{ (softflowd_dest_ip is defined and softflowd_dest_ip | ipaddr) and
-              (softflowd_dest_port is defined and softflowd_dest_port | int > 0) }}"
-  template:
-    src: "{{ item.src }}"
-    dest: "{{ item.dest }}"
-    owner: root
-    group: root
-    mode: 0644
-    force: yes
-  with_items:
-    - { src: softflowd.j2, dest: /etc/default/softflowd }
-    - { src: softflowd.service.j2, dest: /etc/systemd/system/softflowd.service }
-  register: softflowd_srv
-  when: softflowd_enabled
-
-- name: Ensure softflowd is running and enabled as configured.
-  systemd:
-    name: softflowd.service
-    state: "{{ (softflowd_srv | changed) | ternary('restarted', 'started') }}"
-    daemon_reload: yes
-    enabled: yes
-  when: softflowd_enabled
+- include: uninstall.yml
+  when: not softflowd_enabled

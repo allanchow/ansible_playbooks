@@ -1,5 +1,5 @@
 ---
-softflowd_enabled: mode == "prod"
+softflowd_enabled: True
 softflowd_netflow_ver: 5
 softflowd_sampling_rate: 1
 softflowd_cap_iface: "{{ iface }}"
