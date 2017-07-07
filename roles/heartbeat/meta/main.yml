@@ -2,4 +2,3 @@
 dependencies:
   - { role: +requirements }
   - { role: +setupdir }
-  - { role: +facts }
