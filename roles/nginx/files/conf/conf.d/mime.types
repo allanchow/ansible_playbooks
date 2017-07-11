@@ -38,6 +38,8 @@ types {
   image/bmp                             bmp;
   image/gif                             gif;
   image/jpeg                            jpeg jpg;
+#  image/vnd.ms-photo                    jxr wdp hdp;
+  image/jxr                             jxr wdp hdp;
   image/png                             png;
   image/svg+xml                         svg svgz;
   image/tiff                            tif tiff;
@@ -138,6 +140,7 @@ types {
   text/css                              css;
   text/csv                              csv;
   text/html                             html htm shtml;
+  text/markdown                         md;
   text/mathml                           mml;
   text/plain                            txt;
   text/vcard                            vcard vcf;
@@ -146,8 +149,6 @@ types {
   text/vnd.wap.wml                      wml;
   text/vtt                              vtt;
   text/x-component                      htc;
-
-  image/vnd.ms-photo                    jxr wdp hdp;
 
   application/vnd.amazon.ebook          azw;
   application/x-bzip                    bz;
