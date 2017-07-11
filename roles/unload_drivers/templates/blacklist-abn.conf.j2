@@ -8,6 +8,9 @@ blacklist kvm_amd
 
 # no power meter
 blacklist acpi_power_meter
+{% if not physical_host %}
+blacklist intel_rapl
+{% endif %}
 
 # nobeep
 blacklist pcspkr
