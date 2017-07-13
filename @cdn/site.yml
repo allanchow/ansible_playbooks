@@ -82,6 +82,7 @@
         mode: 0755
         force: yes
       with_flattened:
+        - firewall.d/B01default.j2
         - firewall.d/W01cdn-g1-hk-06.j2
         - firewall.d/SH01cdn.j2
         - "{{ (cdn is defined and cdn.logstash is defined) | ternary('firewall.d/SH02logstash.j2', []) }}"
