@@ -117,6 +117,16 @@ whitelist() {
     . $i
   done
 }
+blacklist() {
+  $IPT -N BLACKLIST
+  $IPT -A INPUT -j BLACKLIST -m comment --comment "blacklist"
+  for i in $(find $(dirname $0)/firewall.d/ -maxdepth 1 -type f -perm '-u+x' -name 'B*' | sort);
+  do
+    echo $i
+    trap "" INT QUIT TSTP EXIT
+    . $i
+  done
+}
 trusted() {
   # Office
   {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 %}
@@ -149,13 +159,15 @@ allow_non_tcp() {
   $IPT -A INPUT -p icmp -m icmp --icmp-type echo-reply -m limit --limit 3/second -j ACCEPT -m comment --comment "icmp responses"
   #$IPT -A INPUT -p icmp -m icmp --icmp-type echo-reply -m state --state ESTABLISHED,RELATED -j ACCEPT -m comment --comment "icmp responses"
 }
-default_rej() {
+stop_attack() {
   $IPT -A INPUT ! -i lo -d 127.0.0.1 -j DROP -m comment --comment "block dos attack"
   $IPT -A INPUT -p icmp -m icmp --icmp-type address-mask-request -j DROP -m comment --comment "avoid smurf attack"
   $IPT -A INPUT -p icmp -m icmp --icmp-type timestamp-request -j DROP -m comment --comment "avoid smurf attack"
   {% for ip in (ansible_default_ipv4.address | ipaddr('public') | ternary(ipv4.private,[])) + ipv4.iana_reserved %}
   $IPT -t mangle -A PREROUTING ! -i lo -s {{ ip | resolve }} -j DROP -m comment --comment "block spoofed packets"
   {% endfor %}
+}
+default_rej() {
   $IPT -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable -m comment --comment "RFC compliant - Port Unreachable when udp ports not open"
   $IPT -A INPUT -p tcp -j REJECT --reject-with tcp-reset -m comment --comment "RFC compliant - TCP RST when tcp ports not open"
   $IPT -A INPUT -j REJECT --reject-with icmp-proto-unreachable -m comment --comment "linux default, reject all remaining"
@@ -191,6 +203,8 @@ do_start() {
   whitelist
   # loopback
   $IPT -A INPUT -i lo -j ACCEPT -m comment --comment "loopback"
+  stop_attack
+  blacklist
   default_rej
 }
 main() {

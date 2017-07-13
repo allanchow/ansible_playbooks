@@ -1,0 +1,4 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+
+$IPT -A BLACKLIST -j DROP -m comment --comment "default drop all"
