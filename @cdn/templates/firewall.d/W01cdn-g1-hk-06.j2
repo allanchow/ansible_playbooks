@@ -2,7 +2,7 @@
 # {{ ansible_managed }}
 
 # Temp - act as a office proxy (202.53.150.9)
-$IPT -A WHITELIST -s {{ 'cdn-g1-hk-06' | resolve }} -j ACCEPT -m comment --comment "cdn-g1-hk-06"
+# $IPT -A WHITELIST -s {{ 'cdn-g1-hk-06' | resolve }} -j ACCEPT -m comment --comment "cdn-g1-hk-06"
 
 {% if inventory_hostname_short == 'cdn-g1-hk-06' %}
 # Temp - act as a logstash proxy
