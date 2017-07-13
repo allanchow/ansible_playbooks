@@ -1,0 +1,15 @@
+---
+- name: Ensure OpenSSL Packages are installed
+  apt:
+    name: "{{ item }}"
+    state: latest
+    install_recommends: no
+  with_items:
+    - openssl
+    - ca-certificates
+  register: openssl
+
+- name: Update ca-certificates
+  command:  update-ca-certificates -f
+  changed_when: False
+  when: openssl | changed

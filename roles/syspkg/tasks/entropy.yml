@@ -1,0 +1,24 @@
+---
+- name: Sys - Get System Max Entropy Size
+  shell: cat /proc/sys/kernel/random/poolsize
+  register: entropy_poolsize
+
+- name: Sys - Get Current System Available Entropy
+  shell: cat /proc/sys/kernel/random/entropy_avail
+  register: avail_entropy
+
+- name: Get CPU rdrand Capability
+  shell: grep -o rand /proc/cpuinfo | wc -l
+  register: rand_out
+  changed_when: False
+
+- name: Install rng-tools conditionally
+  apt:
+    name: rng-tools
+    state: "{{ (rand_out.stdout | int > 0) | ternary('present', 'absent') }}"
+    purge: yes
+    install_recommends: no
+  vars:
+    ae: "{{ avail_entropy.stdout }}"
+    pool: "{{ entropy_poolsize.stdout }}"
+  when: rand_out.stdout | int > 0 and ae | int < 1000 and ae | int > pool | int

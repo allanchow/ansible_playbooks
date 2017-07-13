@@ -1,0 +1,8 @@
+---
+- name: Install vm tools if a vm
+  apt:
+    name: open-vm-tools
+    state: latest
+    purge: yes
+    autoremove: yes
+  when: ansible_virtualization_type == "VMware"

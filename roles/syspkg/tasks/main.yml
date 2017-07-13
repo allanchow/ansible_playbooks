@@ -11,6 +11,10 @@
 - include: update-kernel.yml
   when: keneral_update_enabled and ansible_distribution=='Ubuntu'
 
+- include: entropy.yml
+- include: openssl.yml
+- include: vm-tools.yml
+
 - name: Remove Packages
   apt:
     name: "{{ item }}"
@@ -75,7 +79,6 @@
     - [mlocate, irqbalance, psmisc, time, udev]
     - [htop, vnstat, hdparm, strace, ltrace, lsof]
     - [wget, curl]
-    - [openssl, ca-certificates]
     - vim
     - rsync
     - [screen, tree, ncdu]
@@ -93,26 +96,6 @@
 # - name: Intial sensors detect
 #   shell: (while :; do echo ""; done ) | sensors-detect
 #   changed_when: False
-
-- name: Get CPU rdrand Capability
-  shell: grep -o rand /proc/cpuinfo | wc -l
-  register: rand_out
-  changed_when: False
-
-- name: Install rng-tools conditionally
-  apt:
-    name: rng-tools
-    state: "{{ (rand_out.stdout | int > 0) | ternary('present', 'absent') }}"
-    purge: yes
-    install_recommends: no
-
-- name: Install vm tools if a vm
-  apt:
-    name: open-vm-tools
-    state: latest
-    purge: yes
-    autoremove: yes
-  when: ansible_virtualization_type == "VMware"
 
 - name: upgrade
   apt:
