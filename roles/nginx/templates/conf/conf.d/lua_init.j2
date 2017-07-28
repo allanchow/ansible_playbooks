@@ -35,33 +35,7 @@ cjson   = require "cjson"
 --   -- set ctx
 --   ngx.ctx.upstream_servers = answers
 -- end
-logger0 = require "resty.logger.socket0"
-if not logger0.initted() then
-  local ok, err = logger0.init {
-    host = '{{ cdn.logstash.access_log.udp.host }}',
-    port = {{ cdn.logstash.access_log.udp.port }},
-    sock_type = 'udp',
-    timeout = 2000,
-    max_retry_times = 10,
-    retry_interval = 500,
-    max_buffer_reuse = 100,
-    pool_size = {{ nginx.tcp_keepalive_pool }},
-    flush_limit = 1,
-    drop_limit = {{ nginx.udp_buffer_size }}
-  }
-  if not ok then
-    ngx.log(ngx.ERR, "failed to initialize the logger0:", err)
-    return
-  end
-end
--- logger1 = require "resty.logger.socket1"
-function access_log(msg)
-  local bytes, err = logger0.log(msg)
-  if err then
-    ngx.log(ngx.ERR, "failed to log message:", err)
-    return
-  end
-end
+
 function trim(s)
   local from = s:match"^%s*()"
   return from > #s and "" or s:match(".*%S", from)

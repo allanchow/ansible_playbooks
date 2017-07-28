@@ -32,6 +32,36 @@ http {
   init_worker_by_lua_block {
 
     math.randomseed()
+
+    es_access_logger = require "resty.logger.socket0"
+    if not es_access_logger.initted() then
+      local rand = math.random
+      local flush = 15 + tonumber(rand(0,10))
+      local ok, err = es_access_logger.init {
+        host = '{{ cdn.logstash.access_log.udp.host }}',
+        port = {{ cdn.logstash.access_log.udp.port }},
+        sock_type = 'udp',
+        timeout = 2000,
+        max_retry_times = 10,
+        retry_interval = 500,
+        max_buffer_reuse = 100,
+        pool_size = {{ nginx.tcp_keepalive_pool }},
+        flush_limit = 1,
+        drop_limit = {{ nginx.udp_buffer_size }}
+        -- periodic_flush = flush
+      }
+      if not ok then
+        ngx.log(ngx.ERR, "failed to initialize the es_access_logger:", err)
+        return
+      end
+    end
+    function es_log(logger, msg)
+      local bytes, err = logger.log(msg)
+      if err then
+        ngx.log(ngx.ERR, "failed to log message:", err)
+        return
+      end
+    end
   }
   #access_by_lua_file           "/usr/local/nginx/modules/l7/runtime.lua";
   #lua_shared_dict guard_dict    100m;

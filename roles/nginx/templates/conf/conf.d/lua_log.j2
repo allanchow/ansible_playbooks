@@ -175,4 +175,5 @@ if https then
     }
   }
 end
-access_log(cjson.encode(log_json))
+local msg = cjson.encode(log_json)
+es_log(es_access_logger, msg)
