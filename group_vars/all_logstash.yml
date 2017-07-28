@@ -1,0 +1,11 @@
+---
+cdn:
+  logstash:
+    access_log:
+      udp:
+        host: "{{ logstash.vip.prod }}"
+        port: 10514
+    error_log:
+      udp:
+        host: "{{ logstash.vip.prod }}"
+        port: 10515
