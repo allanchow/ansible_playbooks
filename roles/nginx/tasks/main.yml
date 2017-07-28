@@ -132,7 +132,7 @@
 #     chdir: "{{ nginx_root }}"
 #     executable: /bin/bash
 
-- shell: mv /usr/local/nginx/nginx.1.12.0 /usr/local/nginx/nginx
+- shell: "mv /usr/local/nginx/{{ ngx_binary }} /usr/local/nginx/nginx"
 
 
 - name: Generate nginx.service
