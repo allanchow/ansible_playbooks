@@ -22,13 +22,17 @@ events {
 
 http {
   lua_code_cache               on;
-  lua_package_path             "{{ nginx_root }}/modules/lua/?.lua;/usr/local/nginx/modules/l7/?.lua;;";
+  lua_package_path             "{{ nginx_root }}/modules/?.lua;;";
   lua_package_cpath            "{{ nginx_root }}/modules/lua/?.so;;";
 
   init_by_lua_file             "{{ nginx.conf_root }}/conf.d/lua_init";
   header_filter_by_lua_file    "{{ nginx.conf_root }}/conf.d/lua_header";
   log_by_lua_file              "{{ nginx.conf_root }}/conf.d/lua_log";
 
+  init_worker_by_lua_block {
+
+    math.randomseed()
+  }
   #access_by_lua_file           "/usr/local/nginx/modules/l7/runtime.lua";
   #lua_shared_dict guard_dict    100m;
   #lua_shared_dict dict_captcha  70m;

@@ -1,11 +1,9 @@
 ---
-ngx_binary: nginx.1.12.0
+ngx_binary: nginx.1.12.1
 
-lua_cmodules:
-  - modules/lua/cjson.so
 modules:
+  - modules/ngx_http_brotli_filter_module.so
   - modules/ngx_stream_module.so
-  - modules/ngx_http_dyups_module.so
   - modules/ngx_http_echo_module.so
   - modules/ngx_http_headers_more_filter_module.so
   - modules/ngx_http_set_misc_module.so

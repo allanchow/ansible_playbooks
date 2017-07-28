@@ -32,11 +32,12 @@
     - [
         { dest: "conf/conf.d", mode: "0755" },
         { dest: "modules", mode: "0755" },
-        { dest: "modules/lua", mode: "0755" }
+        { dest: "modules/lua", mode: "0755" },
+        { dest: "modules/cdn", mode: "0755" }
       ]
 
 - name: Nginx Dir Setup
-  file: path="{{ nginx_root }}/{{ item.dest }}" state="directory" mode={{ item.mode }}
+  file: path="{{ nginx_root }}/{{ item.dest }}" state=directory mode={{ item.mode }}
   with_items:
     - { dest: logs, mode: "0755" }
     - { dest: "conf/{{ nginx.cert_root | basename }}", mode: "0600" }
@@ -61,18 +62,21 @@
     state: latest
     install_recommends: no
 
-- name: Deploy | Nginx Files
+- name: Deploy | Nginx Modules Dir Layout
+  file: path="{{ nginx_root }}/{{ item | regex_replace(role_path+'/files/','') }}" state=directory mode=0775
+  with_items:
+    - "{{ lookup('pipe', 'find {{ role_path }}/files/modules/ -type d').split('\n') }}"
+
+- name: Deploy | Nginx Module Files
   copy:
     src: "{{ item }}"
-    dest: "{{ nginx_root }}/{{ item }}"
+    dest: "{{ nginx_root }}/{{ item | regex_replace(role_path+'/files/','') }}"
     owner: root
     group: root
     mode: 0644
     force: yes
-  with_flattened:
-    - "{{ ngx_binary }}"
-    - "{{ modules }}"
-    - "{{ lua_cmodules }}"
+  with_items:
+    - "{{ lookup('pipe', 'find {{ role_path }}/files/modules/ -type f').split('\n') }}"
 
 - name: Deploy | Nginx Files
   vars:
@@ -86,6 +90,7 @@
     mode: 0644
     force: yes
   with_fileglob:
+    - "{{ ngx_binary }}"
     - conf/conf.d/*
     - "conf/{{ cert_root }}/*"
 

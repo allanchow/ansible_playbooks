@@ -2,6 +2,8 @@
 -- {{ ansible_managed }}
 
 -- require "resty.iputils"
+require("cdn.core.globalpatches")()
+
 require "resty.core"
 resty_ngx_re  = require "ngx.re"
 cjson   = require "cjson"
