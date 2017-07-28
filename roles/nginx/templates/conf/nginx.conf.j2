@@ -29,6 +29,7 @@ http {
   header_filter_by_lua_file    "{{ nginx.conf_root }}/conf.d/lua_header";
   log_by_lua_file              "{{ nginx.conf_root }}/conf.d/lua_log";
 
+  lua_shared_dict ip_limit_pool 100m;
   init_worker_by_lua_block {
 
     math.randomseed()
@@ -62,7 +63,29 @@ http {
         return
       end
     end
+    function limit_req(key, shm, rps, burst, extra_delay_on_overburst)
+      local limitreq = require "resty.limit.req"
+      local exit = ngx.exit
+      local log = ngx.log
+      local sleep = ngx.sleep
+      local lim, err = limitreq.new(shm, rps, burst)
+      if not lim then log(ngx.ERR, "failed to instantiate a resty.limit.req object: ", err); return end
+      local delay, err = lim:incoming(key, true)
+      if not delay then
+        if err == "rejected" then return exit(ngx.HTTP_TOO_MANY_REQUESTS) end
+        log(ngx.ERR, "failed to limit req:", err)
+        return
+      end
+      if delay > 0 then
+        local excess = err
+        sleep(extra_delay_on_overburst+delay)
+      end
+    end
   }
+  access_by_lua_block {
+    limit_req(ngx.var.binary_remote_addr, "ip_limit_pool", 500, 50, 1)
+  }
+
   #access_by_lua_file           "/usr/local/nginx/modules/l7/runtime.lua";
   #lua_shared_dict guard_dict    100m;
   #lua_shared_dict dict_captcha  70m;
