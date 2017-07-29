@@ -9,6 +9,8 @@ LOGOPT="-m limit --limit 15/minute --log-uid --log-level 7"
 IPT=/sbin/iptables
 IPT6=/sbin/ip6tables
 IF={{ iface }}
+#IFADDR=$(ifconfig $IF  | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{print $1}')
+#IFBCAST=$(ifconfig $IF | grep 'Bcast:' | cut -d: -f2 | awk '{print $1}')
 
 kernel() {
   for i in /proc/sys/net/ipv4/neigh/*/gc_thresh1; do echo 512 > $i; done
@@ -161,6 +163,8 @@ allow_non_tcp() {
 }
 stop_attack() {
   $IPT -A INPUT ! -i lo -d 127.0.0.1 -j DROP -m comment --comment "block dos attack"
+  $IPT -t mangle -A PREROUTING -m pkttype --pkt-type multicast -j DROP -m comment --comment "block multicast packets"
+  $IPT -t mangle -A PREROUTING -m pkttype --pkt-type broadcast -j DROP -m comment --comment "block broadcast packets"
   $IPT -A INPUT -p icmp -m icmp --icmp-type address-mask-request -j DROP -m comment --comment "avoid smurf attack"
   $IPT -A INPUT -p icmp -m icmp --icmp-type timestamp-request -j DROP -m comment --comment "avoid smurf attack"
   {% for ip in (ansible_default_ipv4.address | ipaddr('public') | ternary(ipv4.private,[])) + ipv4.iana_reserved %}
