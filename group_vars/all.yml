@@ -52,6 +52,10 @@ ipv4:
 softflowd:
   ip: "{{ logstash.vip.prod }}"
   port: 9996
+  maxflow: 17000
+  netflow_ver: 5
+  netflow_lvl: full
+  options: -A micro -t udp=180s -t tcp=180s -t tcp.rst=180s -t tcp.fin=180s -t icmp=180s -t general=180s -t maxlife=300s -t expint=10s
 heartbeat:
   outputs:
     direct:
