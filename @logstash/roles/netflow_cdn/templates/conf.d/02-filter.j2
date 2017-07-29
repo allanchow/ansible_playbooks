@@ -15,7 +15,11 @@ filter {
       }
 #   }
     mutate {
-      add_field => { "[cdnhost]" => "%{[host]}" }
+      add_field => {
+        "[cdnhost]" => "%{[host]}"
+#        "[netflow][ipv4_src_host]" => "%{[netflow][ipv4_src_addr]}"
+#        "[netflow][ipv4_dst_host]" => "%{[netflow][ipv4_dst_addr]}"
+      }
     }
     dns {
       reverse => [ "[cdnhost]" ]
@@ -32,29 +36,109 @@ filter {
       }
     }
     cidr {
-      add_tag => [ "private_src_ip" ]
-      address => [ "%{[netflow][ipv4_src_addr]}" ]
-      network => [ "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+      add_tag => [ "allbrightnet" ]
+      address => [ "%{[netflow][ipv4_src_addr]}", "%{[netflow][ipv4_dst_addr]}" ]
+      network => [
+        {{ ipv4.hk_eqx01 | map('wrap') | join(', ') }}
+      ]
     }
-    if "private_src_ip" not in [tags]  {
-      geoip {
-        source => "[netflow][ipv4_src_addr]"
-        target => "src_geoip"
-        database => "{{ logstash_config }}/{{ db_geo }}"
-        remove_tag => [ "private_src_ip" ]
+#    if "allbrightnet" not in [tags] {
+#      dns {
+#        reverse => [ "[netflow][ipv4_src_host]", "[netflow][ipv4_dst_host]" ]
+#        action => "replace"
+#        max_retries => 2
+#        hit_cache_ttl => 60
+#        hit_cache_size => 5000
+#        failed_cache_ttl => 30
+#        failed_cache_size => 1000
+#      }
+#    }
+    cidr {
+      add_tag => [ "cdn_landattack" ]
+      address => [ "%{[netflow][ipv4_src_addr]}" ]
+      network => [ "%{[netflow][ipv4_dst_addr]}" ]
+    }
+    if "cdn_landattack" not in [tags] {
+      cidr {
+        add_tag => [ "cdn_landattack" ]
+        address => [ "%{[netflow][ipv4_dst_addr]}" ]
+        network => [ "%{[netflow][ipv4_src_addr]}" ]
       }
     }
-    cidr {
-      add_tag => [ "private_dst_ip" ]
-      address => [ "%{[netflow][ipv4_dst_addr]}" ]
-      network => [ "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    if "cdn_landattack" not in [tags] {
+  #    if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-.*\.allbright(net(work)?\.com|\.local)$/ {
+      cidr {
+        add_tag => [ "cdn_outflow" ]
+        address => [ "%{[netflow][ipv4_src_addr]}" ]
+        network => [ "%{[host]}" ]
+      }
+  #    if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-.*\.allbright(net(work)?\.com|\.local)$/ {
+      cidr {
+        add_tag => [ "cdn_inflow" ]
+        address => [ "%{[netflow][ipv4_dst_addr]}" ]
+        network => [ "%{[host]}" ]
+      }
+      # Multicast
+      if [netflow][ipv4_src_addr] =~ /^2[2-3][4-9]\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/ {
+        mutate {
+          add_tag => [ "cdn_outflow_multicast" ]
+        }
+      }
+      if [netflow][ipv4_dst_addr] =~ /^2[2-3][4-9]\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/ {
+        mutate {
+          add_tag => [ "cdn_inflow_multicast" ]
+        }
+      }
+      # Broadcast
+      cidr {
+        add_tag => [ "cdn_outflow_broadcast" ]
+        address => [ "%{[netflow][ipv4_src_addr]}" ]
+        network => [ "255.255.255.255" ]
+      }
+      cidr {
+        add_tag => [ "cdn_inflow_broadcast" ]
+        address => [ "%{[netflow][ipv4_dst_addr]}" ]
+        network => [ "255.255.255.255" ]
+      }
     }
-    if "private_dst_ip" not in [tags]  {
+    # src IP Spoofing
+    cidr {
+      add_tag => [ "cdn_spoof_src_addr" ]
+      address => [ "%{[netflow][ipv4_src_addr]}" ]
+      network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    }
+    if "cdn_spoof_src_addr" in [tags] and [netflow][ipv4_src_addr] =~ /\.255$/ {
+      mutate {
+        add_tag => [ "cdn_spoof_src_broadcast_domain" ]
+      }
+    }
+    # src GEO
+    if "cdn_spoof_src_addr" not in [tags] and "cdn_spoof_src_broadcast_domain" not in [tags] and "cdn_outflow_multicast" not in [tags] and "cdn_outflow_broadcast" not in [tags] {
       geoip {
+        periodic_flush => true
+        source => "[netflow][ipv4_src_addr]"
+        target => "src_geoip"
+        database => "{{ logstash.conf_root }}/{{ db_geo }}"
+      }
+    }
+    # dst IP Spoofing
+    cidr {
+      add_tag => [ "cdn_spoof_dst_addr" ]
+      address => [ "%{[netflow][ipv4_dst_addr]}" ]
+      network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    }
+    if "cdn_spoof_dst_addr" in [tags] and [netflow][ipv4_dst_addr] =~ /\.255$/ {
+      mutate {
+        add_tag => [ "cdn_spoof_dst_broadcast_domain" ]
+      }
+    }
+    # dst GEO
+    if "cdn_spoof_dst_addr" not in [tags] and "cdn_spoof_dst_broadcast_domain" not in [tags] and "cdn_inflow_multicast" not in [tags] and "cdn_inflow_broadcast" not in [tags] {
+      geoip {
+        periodic_flush => true
         source => "[netflow][ipv4_dst_addr]"
         target => "dst_geoip"
-        database => "{{ logstash_config }}/{{ db_geo }}"
-        remove_tag => [ "private_dst_ip" ]
+        database => "{{ logstash.conf_root }}/{{ db_geo }}"
       }
     }
     translate {
