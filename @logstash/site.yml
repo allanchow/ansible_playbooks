@@ -23,10 +23,12 @@
 
     - name: Env | Sys - Get System Max Entropy Size
       shell: cat /proc/sys/kernel/random/poolsize
+      changed_when: False
       register: entropy_poolsize
 
     - name: Env | Sys - Get Current System Available Entropy
       shell: cat /proc/sys/kernel/random/entropy_avail
+      changed_when: False
       register: avail_entropy
 
     - name: Env | Sys - Ensure Enough Entropy

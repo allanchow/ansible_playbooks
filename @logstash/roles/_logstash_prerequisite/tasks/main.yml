@@ -1,5 +1,6 @@
 ---
 - name: Env | Logstash Prerequisite [{{ item }}]
   shell: "JAVA_HOME={{ java.home }} bin/logstash-plugin list | grep '{{ item }}' && exit 0 || JAVA_HOME={{ java.home }} bin/logstash-plugin install {{ item }}"
+  changed_when: False
   args:
     chdir: "{{ logstash_root }}"
