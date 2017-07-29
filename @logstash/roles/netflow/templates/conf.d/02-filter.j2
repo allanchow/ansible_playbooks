@@ -39,7 +39,7 @@ filter {
       geoip {
         source => "[netflow][ipv4_src_addr]"
         target => "src_geoip"
-        database => "{{ logstash_config }}/{{ db_geo }}"
+        database => "{{ logstash.conf_root }}/{{ db_geo }}"
         remove_tag => [ "private_src_ip" ]
       }
     }
@@ -52,7 +52,7 @@ filter {
       geoip {
         source => "[netflow][ipv4_dst_addr]"
         target => "dst_geoip"
-        database => "{{ logstash_config }}/{{ db_geo }}"
+        database => "{{ logstash.conf_root }}/{{ db_geo }}"
         remove_tag => [ "private_dst_ip" ]
       }
     }
