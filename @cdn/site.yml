@@ -33,9 +33,13 @@
     - { role: tuned_network,  when: True, tags: [sys, cdn, tuning] }
     - { role: bash,           when: True, tags: [sys, cdn, bash] }
     - { role: softflowd,      when: True, tags: [cdn, softflowd],
-        softflowd_enabled:    "{{ is_softflowd_enabled | bool }}",
-        softflowd_dest_ip:    "{{ softflowd.ip }}",
-        softflowd_dest_port:  "{{ softflowd.port }}"
+        softflowd_enabled:     "{{ is_softflowd_enabled | bool }}",
+        softflowd_dest_ip:     "{{ softflowd.ip }}",
+        softflowd_dest_port:   "{{ softflowd.port }}",
+        softflowd_maxflow:     "{{ softflowd.maxflow }}",
+        softflowd_netflow_ver: "{{ softflowd.netflow_ver }}",
+        softflowd_flowlevel:   "{{ softflowd.netflow_lvl }}",
+        softflowd_opts:        "{{ softflowd.options }}"
       }
     - { role: memcached,      when: True, tags: [cdn, memcached],
         memcached_enabled:    "{{ is_cdn | bool }}",

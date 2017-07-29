@@ -9,4 +9,4 @@ DEST={{ softflowd_dest_ip }}:{{ softflowd_dest_port }}
 {% endif %}
 FLOW_TRACK_LVL={{ softflowd_flowlevel }}
 MAXFLOW={{ softflowd_maxflow }}
-OPTIONS=
+OPTIONS={{ softflowd_opts | default("") }}
