@@ -5,6 +5,7 @@
 Description=softflowd daemon
 After=syslog.target network.target remote-fs.target nss-lookup.target
 ConditionFileIsExecutable={{ base_root }}/bin/softflowd
+ConditionFileIsExecutable={{ base_root }}/bin/softflowctl
 
 [Service]
 Type=simple
@@ -12,9 +13,10 @@ CPUAffinity=0
 IOSchedulingClass=2
 IOSchedulingPriority=4
 
-PIDFile=/var/run/softflowd.pid
+#PIDFile=/var/run/softflowd.pid
 EnvironmentFile=/etc/default/softflowd
 ExecStart={{ base_root }}/bin/softflowd -d -i $IFACE -v $NETFLOW_VER -s $SAMPLING_RATE {{ send_log | ternary('-n $DEST ','') }}-T $FLOW_TRACK_LVL -m $MAXFLOW $OPTIONS
+ExecStop={{ base_root }}/bin/softflowctl expire-all
 StandardOutput=null
 StandardError=null
 
@@ -23,7 +25,7 @@ Restart=on-failure
 # Set up a new file system namespace and mounts private /tmp and /var/tmp directories
 # so this service cannot access the global directories and other processes cannot
 # access this service's directories.
-PrivateTmp=true
+#PrivateTmp=true
 
 {% if systemd_service_mgr_version | int >= 214 %}
 # Mounts the /usr, /boot, and /etc directories read-only for processes invoked by this unit.
