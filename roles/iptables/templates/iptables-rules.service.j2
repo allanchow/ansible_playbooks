@@ -13,6 +13,7 @@ Type=oneshot
 CPUAffinity=0
 IOSchedulingClass=3
 IOSchedulingPriority=7
+WorkingDirectory=/etc/systemd/system
 ExecStart=/bin/sh /etc/systemd/system/firewall start
 ExecStop=/bin/sh /etc/systemd/system/firewall stop
 StandardOutput=null
