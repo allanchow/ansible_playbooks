@@ -65,6 +65,7 @@
     - uidmap
     - [plymouth, plymouth-*]
     - powermgmt-base
+    - ufw
 
 - name: Ensure Packages are installed
   apt:
