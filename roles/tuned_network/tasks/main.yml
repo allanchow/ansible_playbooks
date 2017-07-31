@@ -12,10 +12,14 @@
 
 - name: Ensure tuned-network is running and enabled as configured.
   systemd:
-    name: tuned-network.service
+    name: "{{ item }}"
     state: restarted
     enabled: yes
     daemon_reload: yes
+  with_items:
+    - systemd-networkd
+    - systemd-networkd-wait-online
+    - tuned-network.service
 
 - name: Refuse responding to broadcasts request
   sysctl:
