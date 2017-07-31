@@ -16,10 +16,15 @@
     - "linux-tools-{{ kernel_type }}{{ hwe_prefix }}"
   when: not container
 
+- name: upgrade
+  apt:
+#    autoremove: yes
+    upgrade: dist
+
 - name: Minimify Linux installation if it is a virtual server
   apt:
     name: "{{ item }}"
-    autoremove: yes
+#    autoremove: yes
     purge: yes
     state: absent
   register: ubuntu_minify
@@ -31,7 +36,7 @@
 - name: Cleanup non-hwe kernel images
   apt:
     name: "{{ item }}"
-    autoremove: yes
+#    autoremove: yes
     purge: yes
     state: absent
   register: ubuntu_minify
@@ -39,11 +44,6 @@
     - linux-{{ kernel_type }}
     - linux-tools-{{ kernel_type }}
   when: hwe_enabled and not container
-
-- name: upgrade
-  apt:
-    autoremove: yes
-    upgrade: dist
 
 - name: Install grub components
   apt:
