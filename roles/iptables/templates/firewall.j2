@@ -8,7 +8,7 @@ TRACK="{{ ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT', '-
 LOGOPT="-m limit --limit 15/minute --log-uid --log-level 7"
 IPT=/sbin/iptables
 IPT6=/sbin/ip6tables
-IF={{ iface }}
+IF=$(/sbin/ip route show | grep "^default" | sed "s|^.* dev \([^ \t]*\) .*$|\1|")
 #IFADDR=$(ifconfig $IF  | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{print $1}')
 #IFBCAST=$(ifconfig $IF | grep 'Bcast:' | cut -d: -f2 | awk '{print $1}')
 
