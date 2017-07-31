@@ -10,16 +10,17 @@
   apt:
     name: "{{ item }}"
     install_recommends: yes
-  register: ubuntu_kernel
   with_items:
     - "linux-{{ kernel_type }}{{ hwe_prefix }}"
     - "linux-tools-{{ kernel_type }}{{ hwe_prefix }}"
   when: not container
 
-- name: upgrade
+- name: Upgrade Kernel
   apt:
 #    autoremove: yes
     upgrade: dist
+    install_recommends: no
+  register: ubuntu_kernel
 
 - name: Minimify Linux installation if it is a virtual server
   apt:
@@ -27,6 +28,7 @@
 #    autoremove: yes
     purge: yes
     state: absent
+    install_recommends: no
   register: ubuntu_minify
   with_items:
     - linux-image-extra*
@@ -39,6 +41,7 @@
 #    autoremove: yes
     purge: yes
     state: absent
+    install_recommends: no
   register: ubuntu_minify
   with_items:
     - linux-{{ kernel_type }}

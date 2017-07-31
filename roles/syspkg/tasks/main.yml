@@ -6,7 +6,7 @@
 - name: Update apt cache
   apt:
     update_cache: yes
-    cache_valid_time: 3600
+    cache_valid_time: 60
 
 - include: update-kernel.yml
   when: keneral_update_enabled and ansible_distribution=='Ubuntu'
