@@ -166,10 +166,14 @@ allow_non_tcp() {
 }
 stop_attack() {
   $IPT -A INPUT ! -i lo -d 127.0.0.1 -j DROP -m comment --comment "block dos attack"
+  $IPT -t mangle -A PREROUTING -f -j DROP -m comment --comment "discard any left over fragments"
+  $IPT -t mangle -A PREROUTING -p tcp --syn -m tcpmss ! --mss 536:65535 -j DROP -m comment --comment "drop SYN with suspicious MSS value"
   $IPT -t mangle -A PREROUTING -m pkttype --pkt-type multicast -j DROP -m comment --comment "block multicast packets"
   $IPT -t mangle -A PREROUTING -m pkttype --pkt-type broadcast -j DROP -m comment --comment "block broadcast packets"
   $IPT -A INPUT -p icmp -m icmp --icmp-type address-mask-request -j DROP -m comment --comment "avoid smurf attack"
   $IPT -A INPUT -p icmp -m icmp --icmp-type timestamp-request -j DROP -m comment --comment "avoid smurf attack"
+  $IPT -A INPUT -p tcp --tcp-flags RST RST -m limit --limit 2/s --limit-burst 2 -j ACCEPT -m comment --comment "limit RST"
+  $IPT -A INPUT -p tcp --tcp-flags RST RST -j DROP
   $IPSET create spoofed_src_addr hash:net -exist
   {% for ip in (ansible_default_ipv4.address | ipaddr('public') | ternary(ipv4.private,[])) + ipv4.iana_reserved %}
   $IPSET add spoofed_src_addr {{ ip | resolve }}
@@ -202,7 +206,6 @@ do_start() {
   block_bad_tcpflags
   $IPT -A INPUT -p tcp ! --syn -j ACCEPT -m comment --comment "allow any established connections"
   $IPT -A INPUT -p icmp --icmp-type destination-unreachable -j ACCEPT -m comment --comment "icmp routing messages"
-  $IPT -A INPUT -f -j DROP -m comment --comment "discard any left over fragments"
   services_cls_high
   ack_optimize
   trusted
