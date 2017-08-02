@@ -1,9 +1,12 @@
 ---
 - name: Ensure iptables persent
   apt:
-    name: iptables
+    name: "{{ item }}"
     state: latest
     install_recommends: no
+  with_items:
+    - iptables
+    - ipset
 
 - name: Generate iptables-rules.servie
   template:
