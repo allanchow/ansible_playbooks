@@ -83,7 +83,7 @@ _update_pkg(){
   local prefix=${1}
   local fn_up=${2}
   local pkgnew=${prefix}.$(date +%s)
-  pushd ${LOGSTASH_CONFIG_BASE}
+  pushd ${LOGSTASH_CONFIG_BASE} >/dev/null 2>&1
   local pkg=$(find . -type f -name "${prefix}.*" | sort | head -n 1 | xargs basename 2>/dev/null)
   ${fn_up} ${pkgnew}
   if [[ ! -z ${pkg} ]]; then
@@ -103,9 +103,21 @@ _update_pkg(){
       pkgnew=${pkg}
     fi
   fi
-  popd
+  ${SUDO} ln -sf ${pkgnew} ${prefix}
+  popd >/dev/null 2>&1
   fn.end
   echo ${pkgnew}
+}
+_signal_nodes_if_found(){
+  local siginal=${1:-reload}
+  local found=${2}
+  pushd  ${LOGSTASH_NODE_BASE} >/dev/null 2>&1
+  for i in $(grep -ir ${found} */conf.d/ -l); do
+    local node=$(echo $i | cut -d'/' -f1)
+    echo ${siginal} ${node}
+    cd ${LOGSTASH_BASEPATH} && ${0} ${siginal} ${node}
+  done
+  popd >/dev/null 2>&1
 }
 main() {
   local CMD=${1:-help}; shift;
@@ -120,13 +132,15 @@ main() {
       fn() { ${SUDO} sh -c "curl -s http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz | gunzip -c > $1"; }
       local GEO=GeoLite2-City.mmdb
       pkg=$(_update_pkg ${GEO} fn)
-      ${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${GEO}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
+      _signal_nodes_if_found force-restart ${GEO}
+      #${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${GEO}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
     ;;
     update-ua)
       fn() { ${SUDO} sh -c "curl -s https://raw.githubusercontent.com/ua-parser/uap-core/master/regexes.yaml > $1"; }
       local UA=ua_regexes.yaml
       pkg=$(_update_pkg ${UA} fn)
-      ${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${UA}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
+      _signal_nodes_if_found force-restart ${UA}
+      #${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${UA}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
     ;;
     update-all-plugins)
       local lcmd=bin/logstash-plugin
@@ -172,6 +186,10 @@ EOF
       read -p "This will generate a downtime. Are you sure [Y/n]? " -n 1 -r response
       echo    # (optional) move to a new line
       if [[ ! $response =~ ^[Yy]$ ]]; then abort; fi
+      ${0} force-restart ${NODE}
+    ;;
+    force-restart)
+      node_chk
       local pid=$(logstash_pid)
       if [ $(logstash_is_running) -eq 1 ]; then
         ${0} stop ${NODE}

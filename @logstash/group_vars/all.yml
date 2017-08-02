@@ -1,3 +1,5 @@
 ---
-db_geo: GeoLite2-City.mmdb.1492767371
-db_ua:  ua_regexes.yaml.1492767375
+#db_geo: GeoLite2-City.mmdb.1493949430
+#db_ua:  ua_regexes.yaml.1492767375
+db_geo: GeoLite2-City.mmdb
+db_ua:  ua_regexes.yaml
