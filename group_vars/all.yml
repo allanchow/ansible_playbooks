@@ -59,12 +59,17 @@ softflowd:
 heartbeat:
   outputs:
     direct:
+      #host: 27.111.185.128
       host: "{{ logstash.vip.prod }}"
-      port: 10518
+      port:
+        elasticsearch: 10518
+        influxdb: 8089
       proto: udp
     proxy:
-      - host: "uat-cdn-g1-jp-01"
-        port: 10518
+      - host: uat-cdn-g1-jp-01
+        port:
+          elasticsearch: 10518
+          influxdb: 8089
         proto: udp
 memcached:
   user: memcached

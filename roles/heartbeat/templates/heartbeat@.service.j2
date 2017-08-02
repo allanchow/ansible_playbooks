@@ -15,9 +15,16 @@ IOSchedulingPriority=7
 ExecStart=/bin/sh -c " \
 host=$$(hostname); \
 status=$$(/bin/nc -w 10 -z 127.0.0.1 %i && echo 'alive' || echo 'dead'); \
-{{ base_root }}/bin/logger -P {{ heartbeat_log_port }} -n {{ heartbeat_log_ip }} --rfc3164 '{\"host\":\"'$${host}'\", \"port\":%i, \"status\":\"'$${status}'\", \"channel\":\"direct\"}'; \
-{% for h in heartbeat_log_proxy | default([]) %}
-{{ base_root }}/bin/logger -P {{ h.port }} -n {{ h.host | resolve }} --rfc3164 '{\"host\":\"'$${host}'\", \"port\":%i, \"status\":\"'$${status}'\", \"channel\":\"proxy\"}'; \
+{{ base_root }}/bin/logger -P {{ heartbeat_log_port.elasticsearch }} -n {{ heartbeat_log_ip }} --rfc3164 '{\"host\":\"'$${host}'\", \"port\":%i, \"status\":\"'$${status}'\", \"channel\":\"direct\"}'; \
+{% if heartbeat_log_port.influxdb %}
+echo 'heartbeat,host='$${host}',port=%i,channel=direct status=\"'$${status}'\"' | /bin/nc -w 3 -u {{ heartbeat_log_ip }} {{ heartbeat_log_port.influxdb }}; \
+{% endif %}
+{% for proxy in heartbeat_log_proxy | default([]) %}
+{% set h = proxy.host | resolve %}
+{{ base_root }}/bin/logger -P {{ proxy.port.elasticsearch }} -n {{ h }} --rfc3164 '{\"host\":\"'$${host}'\", \"port\":%i, \"status\":\"'$${status}'\", \"channel\":\"proxy\"}'; \
+{% if proxy.port.influxdb %}
+echo 'heartbeat,host='$${host}',port=%i,channel=proxy status=\"'$${status}'\"' | /bin/nc -w 3 -u {{ h }} {{ proxy.port.influxdb }}; \
+{% endif %}
 {% endfor %}
 "
 StandardOutput=null
