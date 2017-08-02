@@ -8,6 +8,7 @@ TRACK="{{ ansible_kernel | version_compare('2.6.35', '>=') | ternary('-j CT', '-
 LOGOPT="-m limit --limit 15/minute --log-uid --log-level 7"
 IPT=/sbin/iptables
 IPT6=/sbin/ip6tables
+IPSET=/sbin/ipset
 IF=$(/sbin/ip route show | grep "^default" | sed "s|^.* dev \([^ \t]*\) .*$|\1|")
 #IFADDR=$(ifconfig $IF  | grep 'inet addr:' | grep -v '127.0.0.1' | cut -d: -f2 | awk '{print $1}')
 #IFBCAST=$(ifconfig $IF | grep 'Bcast:' | cut -d: -f2 | awk '{print $1}')
@@ -130,10 +131,12 @@ blacklist() {
   done
 }
 trusted() {
+  $IPSET create allbrightnet hash:net -exist
   # Office
   {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 %}
-  $IPT -A INPUT -s {{ ip | resolve }} -j ACCEPT -m comment --comment "allbrightnet"
+  $IPSET add allbrightnet {{ ip | resolve }}
   {% endfor %}
+  $IPT -A INPUT -m set --match-set allbrightnet src -j ACCEPT -m comment --comment "allbrightnet"
 }
 services_cls_low() {
   for i in $(find $(dirname $0)/firewall.d/ -maxdepth 1 -type f -perm '-u+x' -name 'SL*' | sort);
@@ -167,9 +170,11 @@ stop_attack() {
   $IPT -t mangle -A PREROUTING -m pkttype --pkt-type broadcast -j DROP -m comment --comment "block broadcast packets"
   $IPT -A INPUT -p icmp -m icmp --icmp-type address-mask-request -j DROP -m comment --comment "avoid smurf attack"
   $IPT -A INPUT -p icmp -m icmp --icmp-type timestamp-request -j DROP -m comment --comment "avoid smurf attack"
+  $IPSET create spoofed_src_addr hash:net -exist
   {% for ip in (ansible_default_ipv4.address | ipaddr('public') | ternary(ipv4.private,[])) + ipv4.iana_reserved %}
-  $IPT -t mangle -A PREROUTING ! -i lo -s {{ ip | resolve }} -j DROP -m comment --comment "block spoofed packets"
+  $IPSET add spoofed_src_addr {{ ip | resolve }}
   {% endfor %}
+  $IPT -t mangle -A PREROUTING ! -i lo -m set --match-set spoofed_src_addr src -j DROP -m comment --comment "block spoofed packets"
 }
 default_rej() {
   $IPT -A INPUT -p udp -j REJECT --reject-with icmp-port-unreachable -m comment --comment "RFC compliant - Port Unreachable when udp ports not open"
