@@ -1,0 +1,40 @@
+---
+- set_fact:
+    tcp_adv_win_scale: 1
+
+- set_fact:
+    rw_mem_max_bytes_pow_factor: "{{ ((rw_mem_bytes | float | log) / (2 | log)) | round(0, 'floor') }}"
+  vars:
+    bandwidth_mbps: 1000
+    rtt_ms: 70
+    BDP_bytes: "{{ bandwidth_mbps *1000*1000/8 * rtt_ms/1000 }}"
+    rw_mem_bytes: "{{ BDP_bytes | int / (1 - 1 / (2 | pow(tcp_adv_win_scale))) }}"
+
+- name: Set the read and write buffer space allocatable
+  sysctl:
+    name: "{{ inner_item.name }}"
+    value: "{{ inner_item.value }}"
+    sysctl_set: yes
+    sysctl_file: "{{ sysctl_custom_conf }}"
+    reload: yes
+  loop_control:
+    loop_var: inner_item
+  with_items:
+    # ref: http://blog.csdn.net/russell_tao/article/details/18711023
+    # tcp receive buffere auto-tuning, for production
+    - { name: net.ipv4.tcp_moderate_rcvbuf, value: 1 }
+    - { name: net.ipv4.tcp_adv_win_scale, value: "{{ tcp_adv_win_scale }}" }
+    # Increase the read-buffer space allocatable
+    - { name: net.ipv4.tcp_rmem, value: "{{ '8192 87380 %s' % rw_mem_max_bytes }}" }
+    - { name: net.ipv4.udp_rmem_min, value: "{{ 2 | pow(udp_min_pow_factor) | int }}" }
+    - { name: net.core.rmem_default, value: "{{ 2 | pow(default_pow_factor) | int }}" }
+    - { name: net.core.rmem_max, value: "{{ rw_mem_max_bytes }}" }
+    # Increase the write-buffer-space allocatable
+    - { name: net.ipv4.tcp_wmem, value: "{{ '8192 16384 %s' % rw_mem_max_bytes }}" }
+    - { name: net.ipv4.udp_wmem_min, value: "{{ 2 | pow(udp_min_pow_factor) | int }}" }
+    - { name: net.core.wmem_default, value: "{{ 2 | pow(default_pow_factor) | int }}" }
+    - { name: net.core.wmem_max, value: "{{ rw_mem_max_bytes }}" }
+  vars:
+    - udp_min_pow_factor: 14
+    - default_pow_factor: 18
+    - rw_mem_max_bytes: "{{ 2 | pow([rw_mem_max_bytes_pow_factor | int, default_pow_factor] | max) | int }}"

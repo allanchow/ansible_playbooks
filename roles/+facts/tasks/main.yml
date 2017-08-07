@@ -8,6 +8,17 @@
   shell: blockdev --getpbsz $(df | grep " /$" | cut -d" " -f1) 2>/dev/null || echo 512
   register: pbsz_out
   changed_when: False
+
+- name: Env | Get default PAGE_SIZE
+  shell: getconf PAGE_SIZE
+  register: def_page_size_out
+  changed_when: False
+
+- name: Env | Get default _PHYS_PAGES (mempages)
+  shell: getconf _PHYS_PAGES
+  register: def_mempages_out
+  changed_when: False
+
 #
 # # lscpu or {{ ansible_processor_vcpus }} are unreliable in VPS, their value may be a vhost value
 # - name: Env | Get CPU Count
@@ -44,3 +55,5 @@
     is_seccomp_enabled:           "{{ is_seccomp_enabled_out.stdout | int == 1 }}"
     iface:                        "{{ def_iface_out.stdout }}"
     pbsz:                         "{{ pbsz_out.stdout | default(512) | int }}"
+    page_size:                    "{{ def_page_size_out.stdout | int }}"
+    mempages:                     "{{ def_mempages_out.stdout | int }}"

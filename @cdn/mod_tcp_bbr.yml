@@ -1,0 +1,45 @@
+---
+- name: tcp_bbr available in kernel config
+  shell: grep "CONFIG_TCP_CONG_BBR=[m|y]" /boot/config-$(uname -r) | wc -l
+  changed_when: False
+  register: tcp_bbr
+
+- block:
+  - name: Enable systemd-modules-load.service
+    systemd:
+      name: systemd-modules-load
+      enabled: yes
+      state: started
+
+  - name: Load tcp_bbr kernel module at startup
+    blockinfile:
+      path: /etc/modules-load.d/tcp_bbr.conf
+      create: yes
+      mode: 0644
+      owner: root
+      group: root
+      block: |
+        tcp_bbr
+
+  - name: Load tcp_bbr kernel module
+    modprobe:
+      name: tcp_bbr
+      state: present
+
+  # For high-bandwidth low-latency networks, use 'htcp' congestion control
+  # For servers with tcp-heavy workloads, enable 'fq' queue management scheduler (kernel > 3.12)
+
+  - name: Enable tcp_bbr
+    sysctl:
+      name: "{{ inner_item.name }}"
+      value: "{{ inner_item.value }}"
+      sysctl_set: yes
+      sysctl_file: "{{ sysctl_custom_conf }}"
+      reload: yes
+    loop_control:
+      loop_var: inner_item
+    with_items:
+      - { name: net.ipv4.tcp_congestion_control, value: bbr }
+      - { name: net.core.default_qdisc, value: fq }
+
+  when: tcp_bbr.stdout | int == 1
