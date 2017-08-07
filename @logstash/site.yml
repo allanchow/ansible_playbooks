@@ -7,9 +7,9 @@
   any_errors_fatal: true
   serial: 1
   become: true
-  gather_facts: false
 
   pre_tasks:
+    - include_role: name=+requirements
 
     # - name: Env | CPU support rdrand
     #   shell: cat /proc/cpuinfo | grep rdrand > /dev/null && echo 1 || echo 0
