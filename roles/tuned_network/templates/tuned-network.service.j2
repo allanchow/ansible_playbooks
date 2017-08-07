@@ -8,11 +8,13 @@ After=network.target network-online.target
 ConditionFileIsExecutable=/sbin/ip
 ConditionFileIsExecutable=/sbin/ifconfig
 ConditionFileIsExecutable=/bin/bash
+ConditionFileIsExecutalbe=/sbin/ethtool
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/bin/bash -c "for dev in $$(ls -1 /sys/class/net | egrep \"^v?[en|eth]\"); do devname=$${dev##*/}; /sbin/ifconfig $${devname} txqueuelen 10000; /sbin/ip link set $${devname} multicast off; done; def_r=$$(/sbin/ip route show | grep \"^default\"); /sbin/ip route change $${def_r} initrwnd 10 initcwnd 10;"
+EnvironmentFile=/etc/default/tuned-network
+ExecStart=/bin/bash -c "for dev in $$(ls -1 /sys/class/net | egrep \"^v?[en|eth]\"); do devname=$${dev##*/}; /sbin/ifconfig $${devname} txqueuelen $TXQUEUELEN; /sbin/ip link set $${devname} multicast off; done; def_r=$$(/sbin/ip route show | grep \"^default\"); /sbin/ip route change $${def_r} initrwnd $INITRWND initcwnd $INITCWND; for i in rx tx other combined; do /sbin/ethtool -L $${devname} $a $(/sbin/ethtool -l $${devname} | grep -i ^$a: | awk -F' ' '{print $2}' | sort -n | head -n 1); done; tc qdisc replace dev $${devname} root mq || tc qdisc replace dev $${devname} root $$(sysctl -n net.core.default_qdisc)"
 ExecStop=/bin/bash -c "for dev in $$(ls -1 /sys/class/net | egrep \"^v?[en|eth]\"); do devname=$${dev##*/}; /sbin/ifconfig $${devname} txqueuelen 1000; /sbin/ip link set $${devname} multicast on; done; def_r=$$(/sbin/ip route show | grep \"^default\"); /sbin/ip route change $${def_r} initrwnd 0 initcwnd 0;"
 StandardOutput=null
 StandardError=null

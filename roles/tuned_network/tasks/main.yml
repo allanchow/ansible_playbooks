@@ -1,14 +1,15 @@
 ---
 - name: Generate tuned-network.service
   template:
-    src: "{{ item }}"
-    dest: "/etc/systemd/system/{{ item | regex_replace('[.]j2$', '') }}"
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
     owner: root
     group: root
     mode: 0644
     force: yes
   with_items:
-    - tuned-network.service.j2
+    - { src: tuned-network.j2, dest: /etc/default/tuned-network }
+    - { src: tuned-network.service.j2, dest: /etc/systemd/system/tuned-network.service }
 
 - name: Ensure tuned-network is running and enabled as configured.
   systemd:
@@ -34,6 +35,7 @@
     name: net.ipv4.tcp_syncookies
     value: 1
     sysctl_set: yes
+    sysctl_file: "{{ sysctl_conf_file }}"
     reload: yes
   when: not container
 

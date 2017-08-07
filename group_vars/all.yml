@@ -1,5 +1,6 @@
 ---
 base_root: /usr/local
+sysctl_custom_conf: /etc/sysctl.d/99-abn-tuning.conf
 logstash_root: "{{ base_root }}/logstash"
 logstash:
   user:           logstash
