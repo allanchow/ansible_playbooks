@@ -30,7 +30,9 @@
     - { role: services,       when: True, tags: [sys, cdn] }
     - { role: iptables,       when: True, tags: [cdn, firewall] }
     - { role: tuned_cpu,      when: True, tags: [sys, cdn, tuning] }
-    - { role: tuned_network,  when: True, tags: [sys, cdn, tuning] }
+    - { role: tuned_network,  when: True, tags: [sys, cdn, tuning],
+        sysctl_conf_file:     "{{ sysctl_custom_conf }}"
+      }
     - { role: bash,           when: True, tags: [sys, cdn, bash] }
     - { role: softflowd,      when: True, tags: [cdn, softflowd],
         softflowd_enabled:     "{{ is_softflowd_enabled | bool }}",
@@ -101,6 +103,8 @@
         state: restarted
       tags: [firewall]
 
+    - include: sysctl.yml
+      tags: [tuning]
 
   # python3-chardet* python3-debian* python3-requests* ssh-import-id*
 # pip install chardet
