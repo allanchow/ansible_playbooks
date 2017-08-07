@@ -15,7 +15,7 @@
     - "linux-tools-{{ kernel_type }}{{ hwe_prefix }}"
   when: not container
 
-- name: Upgrade Kernel
+- name: Upgrade kernel to latest version
   apt:
 #    autoremove: yes
     upgrade: dist
@@ -68,17 +68,18 @@
   async: 1
   poll: 0
   ignore_errors: true
+  register: reboot_result
   when: not container and (ubuntu_kernel | changed)
 
 - name: Wait for server to come back
   local_action: wait_for
   args:
-    host: "{{ inventory_hostname_short }}"
-    port: 22
+    host: "{{ ansible_host | default(inventory_hostname_short) }}"
+    port: "{{ ansible_port | default(22) }}"
     state: started
     delay: 30
-    timeout: 300
-  when: not container and (ubuntu_kernel | changed)
+    timeout: 600
+  when: not container and (reboot_result | changed)
 
 - name: Remove old kernel images
   shell: for i in $(dpkg -l | cut -d' ' -f3 | tail -n +6 | grep -E 'linux-image-[0-9]+' | grep -Fv $(uname -r)); do apt -y purge $i; done;

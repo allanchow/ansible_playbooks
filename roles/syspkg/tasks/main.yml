@@ -15,7 +15,7 @@
 - include: openssl.yml
 - include: vm-tools.yml
 
-- name: Remove Packages
+- name: Remove unneeded packages
   apt:
     name: "{{ item }}"
     state: absent
@@ -67,7 +67,7 @@
     - powermgmt-base
     - ufw
 
-- name: Ensure Packages are installed
+- name: Ensure packages are installed
   apt:
     name: "{{ item }}"
     state: latest
