@@ -66,13 +66,13 @@ filter {
       }
     }
     if "cdn_landattack" not in [tags] {
-  #    if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-.*\.allbright(net(work)?\.com|\.local)$/ {
+  #    if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-g.*\.allbright(net(work)?\.com|\.local)$/ {
       cidr {
         add_tag => [ "cdn_outflow" ]
         address => [ "%{[netflow][ipv4_src_addr]}" ]
         network => [ "%{[host]}" ]
       }
-  #    if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-.*\.allbright(net(work)?\.com|\.local)$/ {
+  #    if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-g.*\.allbright(net(work)?\.com|\.local)$/ {
       cidr {
         add_tag => [ "cdn_inflow" ]
         address => [ "%{[netflow][ipv4_dst_addr]}" ]
