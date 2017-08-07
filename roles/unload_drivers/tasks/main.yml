@@ -12,6 +12,20 @@
 
 # https://people.canonical.com/~ubuntu-security/cve/2017/CVE-2017-6074.html
 # https://github.com/xairy/kernel-exploits/tree/master/CVE-2017-6074
+- name: Check if built with CONFIG_IP_DCCP
+  shell: grep "CONFIG_IP_DCCP=[m|y]" /boot/config-$(uname -r) | wc -l
+  register: is_built_with_ip_dccp
+  changed_when: False
+
+- set_fact:
+    blacklist_dccp: is_built_with_ip_dccp.stdout | int == 1 and ansible_kernel | version_compare('4.8','<=')
+
+- name: remove CVE-2017-6074 fix
+  file:
+    path: /etc/modprobe.d/blacklist-dccp.conf
+    state: absent
+  when: not blacklist_dccp
+
 - name: CVE-2017-6074 - Blacklist the dccp ipv[46] autoloading aliases
   blockinfile:
     path: /etc/modprobe.d/blacklist-dccp.conf
@@ -24,7 +38,7 @@
       alias net-pf-2-proto-33-type-6 off
       alias net-pf-10-proto-0-type-6 off
       alias net-pf-10-proto-33-type-6 off
-  when: ansible_os_family == 'Debian'
+  when: ansible_os_family == 'Debian' and blacklist_dccp
 
 # https://access.redhat.com/security/cve/CVE-2017-6074
 - name: CVE-2017-6074 - Blacklist the dccp
@@ -36,4 +50,4 @@
     group: root
     block: |
       install dccp /bin/true
-  when: ansible_os_family == 'RedHat'
+  when: ansible_os_family == 'RedHat' and blacklist_dccp
