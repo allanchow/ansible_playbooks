@@ -60,24 +60,28 @@ filter {
       field => "[netflow][protocol]"
       destination => "[netflow][protocol_name]"
       dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/proto.yml"
+      exact => true
       fallback => "no match"
     }
     translate {
       field => "[netflow][tcp_flags]"
       destination => "[netflow][tcp_flags_name]"
       dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/tcp_flags.yml"
+      exact => true
       fallback => "no match"
     }
     translate {
       field => "[netflow][l4_src_port]"
       destination => "[netflow][l4_src_port_name]"
       dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/src_dst_port.yml"
+      exact => true
       fallback => "no match"
     }
     translate {
       field => "[netflow][l4_dst_port]"
       destination => "[netflow][l4_dst_port_name]"
       dictionary_path => "{{ logstash.nodes_root }}/{{ logstash_nodename }}/conf.d/netflow/src_dst_port.yml"
+      exact => true
       fallback => "no match"
     }
   }
