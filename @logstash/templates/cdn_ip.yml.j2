@@ -1,0 +1,6 @@
+#jinja2: lstrip_blocks: "True", trim_blocks: "True"
+# {{ ansible_managed }}
+
+{% for cdn in cdn_dns %}
+"{{ cdn.ip }}": {{ cdn.name }}
+{% endfor %}

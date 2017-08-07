@@ -14,10 +14,10 @@ filter {
       }
     }
     mutate {
-      add_field => { "[cdnhost]" => "%{[host]}" }
+      add_field => { "[hostname]" => "%{[host]}" }
     }
     dns {
-      reverse => [ "[cdnhost]" ]
+      reverse => [ "[hostname]" ]
       action => "replace"
       max_retries => 2
       hit_cache_ttl => 60
@@ -25,9 +25,71 @@ filter {
       failed_cache_ttl => 30
       failed_cache_size => 1000
     }
-    if "%{[cdnhost]}" == "%{[host]}" {
+    if "%{[hostname]}" == "%{[host]}" {
       mutate {
-        remove_field => [ "cdnhost" ]
+        remove_field => [ "hostname" ]
+      }
+    }
+    # CDN
+    translate {
+      field => "[netflow][ipv4_src_addr]"
+      destination => "[netflow][ipv4_src_host]"
+      dictionary_path => "{{ logstash.conf_root }}/cdn_ip.yml"
+      exact => true
+    }
+    translate {
+      field => "[netflow][ipv4_dst_addr]"
+      destination => "[netflow][ipv4_dst_host]"
+      dictionary_path => "{{ logstash.conf_root }}/cdn_ip.yml"
+      exact => true
+    }
+    if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-g.*$/ {
+      mutate {
+        add_tag => [ "cdn_inflow" ]
+      }
+    }
+    if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-g.*$/ {
+      mutate {
+        add_tag => [ "cdn_outflow" ]
+      }
+    }
+    cidr {
+      add_tag => [ "allbrightnet" ]
+      address => [ "%{[netflow][ipv4_src_addr]}", "%{[netflow][ipv4_dst_addr]}" ]
+      network => [
+        {{ ipv4.hk_eqx01 | map('wrap') | join(', ') }}
+      ]
+    }
+    # Multicast
+    if [netflow][ipv4_src_addr] =~ /^2[2-3][4-9]\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/ {
+      mutate {
+        add_tag => [ "outflow_multicast" ]
+      }
+    }
+    if [netflow][ipv4_dst_addr] =~ /^2[2-3][4-9]\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/ {
+      mutate {
+        add_tag => [ "inflow_multicast" ]
+      }
+    }
+    # Broadcast
+    cidr {
+      add_tag => [ "outflow_broadcast" ]
+      address => [ "%{[netflow][ipv4_src_addr]}" ]
+      network => [ "255.255.255.255" ]
+    }
+    cidr {
+      add_tag => [ "inflow_broadcast" ]
+      address => [ "%{[netflow][ipv4_dst_addr]}" ]
+      network => [ "255.255.255.255" ]
+    }
+    if [netflow][ipv4_src_addr] =~ /\.255$/ {
+      mutate {
+        add_tag => [ "outflow_broadcast_domain"]
+      }
+    }
+    if [netflow][ipv4_dst_addr] =~ /\.255$/ {
+      mutate {
+        add_tag => [ "inflow_broadcast_domain"]
       }
     }
     cidr {
@@ -35,7 +97,7 @@ filter {
       address => [ "%{[netflow][ipv4_src_addr]}" ]
       network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
     }
-    if "private_src_ip" not in [tags]  {
+    if "private_src_ip" not in [tags] and "outflow_broadcast" not in [tags] and "outflow_broadcast_domain" not in [tags] and "outflow_multicast" not in [tags] {
       geoip {
         source => "[netflow][ipv4_src_addr]"
         target => "src_geoip"
@@ -48,7 +110,7 @@ filter {
       address => [ "%{[netflow][ipv4_dst_addr]}" ]
       network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
     }
-    if "private_dst_ip" not in [tags]  {
+    if "private_dst_ip" not in [tags] and "inflow_broadcast" not in [tags] and "inflow_broadcast_domain" not in [tags] and "inflow_multicast" not in [tags] {
       geoip {
         source => "[netflow][ipv4_dst_addr]"
         target => "dst_geoip"

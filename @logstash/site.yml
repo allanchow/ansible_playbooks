@@ -10,6 +10,7 @@
 
   pre_tasks:
     - include_role: name=+requirements
+    - include_role: name=+build_cdn_ip_list
 
     # - name: Env | CPU support rdrand
     #   shell: cat /proc/cpuinfo | grep rdrand > /dev/null && echo 1 || echo 0
@@ -49,13 +50,14 @@
 
     - name: Deploy | Logstash - Generate Files
       template:
-        src: "{{ item }}"
-        dest: "{{ logstash_root }}/{{ item | regex_replace('[.]j2$', '') }}"
+        src: "{{ item.src }}"
+        dest: "{{ item.dst }}"
         owner: root
         group: root
-        mode: 0755
+        mode: "{{ item.mode }}"
       with_items:
-        - svc_logstash.j2
+        - { src: svc_logstash.j2, dst: "{{ logstash_root }}/svc_logstash", mode: "0755" }
+        - { src: cdn_ip.yml.j2, dst: "{{ logstash_root }}/config/cdn_ip.yml", mode: "0644" }
 
     - name: Env | Logstash - Folder Permission
       file:
