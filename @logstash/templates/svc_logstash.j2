@@ -113,9 +113,11 @@ _signal_nodes_if_found(){
   local found=${2}
   pushd  ${LOGSTASH_NODE_BASE} >/dev/null 2>&1
   for i in $(grep -ir ${found} */conf.d/ -l); do
-    local node=$(echo $i | cut -d'/' -f1)
-    echo ${siginal} ${node}
-    cd ${LOGSTASH_BASEPATH} && ${0} ${siginal} ${node}
+    NODE=$(echo $i | cut -d'/' -f1)
+    if [ $(logstash_is_running) -eq 1 ]; then
+      echo ${siginal} ${NODE}
+      cd ${LOGSTASH_BASEPATH} && ${0} ${siginal} ${NODE}
+    fi
   done
   popd >/dev/null 2>&1
 }
