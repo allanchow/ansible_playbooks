@@ -28,3 +28,23 @@
     state: restarted
     daemon_reload: yes
     enabled: yes
+
+- name: iptables tuning
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    sysctl_file: "{{ sysctl_custom_conf }}"
+    state: present
+  with_items:
+    # netfilter
+    - { name: net.netfilter.nf_conntrack_max, value: 10000000 }
+    - { name: net.netfilter.nf_conntrack_tcp_loose, value: 0 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_established, value: 1800 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_close, value: 10 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_close_wait, value: 10 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_fin_wait, value: 20 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_last_ack, value: 20 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_syn_recv, value: 20 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_syn_sent, value: 20 }
+    - { name: net.netfilter.nf_conntrack_tcp_timeout_time_wait, value: 10 }
