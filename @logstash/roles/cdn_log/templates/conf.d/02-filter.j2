@@ -39,8 +39,8 @@ filter {
     # Force to encode message to utf-8 before json parsing
     ruby {
       code => "
-        msg = event.get('message').dup
-        msg.force_encoding(Encoding::UTF_8)
+        #msg = event.get('message').dup
+        #msg.force_encoding(Encoding::UTF_8)
         # unless msg.force_encoding(Encoding::UTF_8).valid_encoding?
         #   enc = [Encoding::GB18030]
         #   enc.each { |enc|
@@ -55,11 +55,137 @@ filter {
         #   end.join
         #   msg.force_encoding(Encoding::UTF_8)
         #end
-        event.set('message', msg)
+        $key_dict = {
+        	'a' => 'time_local',
+        	'b' => 'time_iso8601',
+        	'c' => 'request_at_ms',
+        	'd' => 'request_time_ms',
+        	'e' => 'resource_id',
+        	'f' => 'https',
+        	'g' => 'http2',
+        	'h' => 'cdnhost',
+        	'i' => 'server',
+        		'i1' => 'program',
+        	'j' => 'vhost',
+        		'j1' => 'name',
+        		'j2' => 'addr',
+        		'j3' => 'port',
+        	'k' => 'conn',
+        		'k1' => 'id',
+        		'k2' => 'requests',
+        	'l' => 'tcpinfo',
+        		'l1' => 'rtt',
+        		'l2' => 'rttvar',
+        		'l3' => 'snd_cwnd',
+        		'l4' => 'rcv_space',
+        	'm' => 'req',
+        		'm1' => 'id',
+        		'm2' => 'completion',
+        		'm3' => 'length',
+        		'm4' => 'pipe',
+        		'm5' => 'host',
+        		'm6' => 'client_ip',
+        		'm7' => 'client_port',
+        		'm8' => 'auth',
+        		'm9' => 'scheme',
+        		'm10' => 'protocol',
+        		'm11' => 'verb',
+        		'm12' => 'uri',
+        		'm13' => 'raw_uri',
+        		'm14' => 'file_ext',
+        		'm15' => 'query_string',
+        		'm16' => 'filename',
+        		'm17' => 'content_length',
+        		'm18' => 'content_type',
+        		'm19' => 'range',
+        		'm20' => 'pragma',
+        		'm21' => 'cache_control',
+        		'm22' => 'connection',
+        		'm23' => 'accept',
+        		'm24' => 'accept_encoding',
+        		'm25' => 'referer',
+        		'm26' => 'referer_invalid',
+        		'm27' => 'cookie',
+        		'm28' => 'ua',
+        			'm28a' => 'raw_agent',
+        	'n' => 'resp',
+        		'n1' => 'status',
+        		'n2' => 'gzip_ratio',
+        		'n3' => 'bytes',
+        		'n4' => 'bytes_kb',
+        		'n5' => 'bytes_mb',
+        		'n6' => 'body_bytes',
+        		'n7' => 'content_length',
+        		'n8' => 'content_type',
+        		'n9' => 'content_encoding',
+        		'n10' => 'pragma',
+        		'n11' => 'cache_control',
+        		'n12' => 'keepalive',
+        		'n13' => 'connection',
+        		'n14' => 'location',
+        		'n15' => 'content_security_policy',
+        		'n16' => 'p3p',
+        		'n17' => 'via',
+        		'n18' => 'transfer_encoding',
+        		'n19' => 'cache_status',
+        		'n20' => 'upstream_server',
+        		'n21' => 'upstream',
+        			'n21a' => 'addr',
+        			'n21b' => 'port',
+        			'n21c' => 'status',
+        			'n21d' => 'body_bytes_length',
+        			'n21e' => 'bytes_received',
+        			'n21f' => 'response_time_ms',
+        			'n21g' => 'header_time_ms',
+        			'n21h' => 'connect_time_ms',
+        	'o' => 'ssl',
+        		'o1' => 'sess_id',
+        		'o2' => 'sess_reused',
+        		'o3' => 'protocol',
+        		'o4' => 'sni_server_name',
+        		'o5' => 'cipher',
+        		'o6' => 'ciphers_supported',
+        		'o7' => 'client',
+        			'o7a' => 'curves_supported',
+        			'o7b' => 'verified',
+        			'o7c' => 'cert_start_date',
+        			'o7d' => 'cert_end_date',
+        			'o7e' => 'cert_expired_left',
+        			'o7f' => 'cert_serial',
+        			'o7g' => 'cert_subject_dn',
+        			'o7h' => 'cert_subject_dn_legacy',
+        			'o7i' => 'cert_issuer_dn',
+        			'o7j' => 'cert_issuer_dn_legacy',
+        			'o7k' => 'cert_sha1',
+        			'o7l' => 'cert_raw_pem',
+        			'o7m' => 'cert_pem'
+        }
+        def map_value(thing)
+          case thing
+          when Hash
+            deep_transform_key(thing)
+          when Array
+            return nil if thing.empty?
+            thing.map { |v| map_value(v) }
+          when String
+            thing.force_encoding(Encoding::UTF_8).to_s
+          else
+            thing
+          end
+        end
+        def deep_transform_key(hash)
+          {}.tap do |h|
+            hash.each do |key, value|
+              next unless $key_dict.has_key?(key)
+              val = map_value(value)
+              h[$key_dict[key]] = val unless val.nil?
+            end
+          end
+        end
+        deep_transform_key(event.get('message')).each{ |k, v| event.set(k, v) }
       "
     }
-    json {
-      source => "message"
+    mutate {
       remove_field => [ "message" ]
     }
     if [server][program] !~ /(?i)^nginx/ { drop {} }

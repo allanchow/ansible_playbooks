@@ -6,7 +6,7 @@ input {
   udp {
     host => "{{ input.host }}"
     port => {{ input.port }}
-    codec => "plain"
+    codec => compress_spooler { spool_size => 4096 }
     workers => 10
     queue_size => 300000
     buffer_size => 65535

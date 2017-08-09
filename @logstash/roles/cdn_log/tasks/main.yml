@@ -9,6 +9,7 @@
     - logstash-filter-cidr
     # - logstash-filter-tld
     - logstash-output-mongodb
+    - logstash-codec-compress_spooler
 
 - name: Deploy | [{{ logstash_nodename }}] - Generate Logstash Node Config
   vars:

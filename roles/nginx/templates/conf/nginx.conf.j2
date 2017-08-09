@@ -57,7 +57,8 @@ http {
       end
     end
     function es_log(logger, msg)
-      local bytes, err = logger.log(msg)
+      local deflated = zlib.deflate()(mp.pack({{'{{'}}message=msg{{'}}'}}), 'finish')
+      local bytes, err = logger.log(deflated)
       if err then
         ngx.log(ngx.ERR, "failed to log message:", err)
         return

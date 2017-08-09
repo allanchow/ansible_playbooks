@@ -11,6 +11,174 @@ local file_ext_regex = [[/[^\?#]*\.(?<ext>[^\?#/\.]+)(?:$|[\?#])]]
 local m = ngx.re.match(raw_uri, file_ext_regex, "aisjo")
 local file_ext = m and m['ext'] or ''
 
+-- local server_log_json = {
+--   program          = 'nginx',
+--   version          = __to_s(var.nginx_version),
+--   pid              = tonumber(var.pid),
+--   hostname         = __to_s(var.hostname),
+--   status = {
+--     active         = tonumber(var.connections_active),
+--     reading        = tonumber(var.connections_reading),
+--     writing        = tonumber(var.connections_writing),
+--     waiting        = tonumber(var.connections_waiting)
+--   }
+-- }
+-- server_log(cjson.encode(server_log_json))
+
+local log_json = {
+  -- time_local
+  a         = var.time_local,
+  -- time_iso8601
+  b       = var.time_iso8601,
+  -- request_at_ms
+  c      = math.floor(tonumber(var.msec) * 1000),
+  -- request_time_ms
+  d    = math.floor(tonumber(var.request_time) * 1000),
+  -- resource_id
+  e        = __to_n(var._resource_id),
+  -- https
+  f              = https,
+  -- http2
+  g              = __to_s(var.http2),
+  -- cdnhost
+  h            = '{{ inventory_hostname_short }}',
+  -- server
+  i = {
+    -- program
+    i1          = 'nginx'
+  },
+  -- vhost
+  j = {
+    -- name
+    j1             = __to_s(var.server_name),
+    -- addr
+    j2             = var.server_addr,
+    -- port
+    j3             = tonumber(var.server_port)
+  },
+  -- conn
+  k = {
+    -- id
+    k1               = tonumber(var.connection),
+    -- requests
+    k2         = tonumber(var.connection_requests)
+  },
+  -- tcpinfo
+  l = {
+    -- rtt
+    l1              = tonumber(var.tcpinfo_rtt),
+    -- rttvar
+    l2           = tonumber(var.tcpinfo_rttvar),
+    -- snd_cwnd
+    l3         = tonumber(var.tcpinfo_snd_cwnd),
+    -- rcv_space
+    l4        = tonumber(var.tcpinfo_rcv_space)
+  },
+  -- req
+  m = {
+    -- id
+    m1               = var.request_id,
+    -- completion
+    m2       = var.request_completion,
+    -- length
+    m3           = __to_n(var.request_length, 0),
+    -- pipe
+    m4             = var.pipe == 'p' and true or false,
+    -- host
+    m5             = __to_s(var.host),
+    -- client_ip
+    m6        = var.remote_addr,
+    -- client_port
+    m7      = __to_n(var.remote_port),
+    -- auth
+    m8             = __to_s(var.remote_user),
+    -- scheme
+    m9           = __to_s(var.scheme),
+    -- protocol
+    m10         = __to_s(var.server_protocol),
+    -- verb
+    m11             = __to_s(var.request_method),
+    -- uri
+    m12              = __to_s(var.uri),
+    -- raw_uri
+    m13          = __to_s(raw_uri),
+    -- file_ext
+    m14         = __to_s(file_ext),
+    -- query_string
+    m15     = __to_s(var.query_string),
+    -- filename
+    m16         = __to_s(var.request_filename),
+    -- content_length
+    m17   = __to_n(var.content_length),
+    -- content_type
+    m18     = __to_s(var.content_type),
+    -- range
+    m19            = __to_s(var.http_range),
+    -- pragma
+    m20           = __to_s(var.http_pragma),
+    -- cache_control
+    m21    = __to_s(var.http_cache_control),
+    -- connection
+    m22       = __to_s(var.http_connection),
+    -- accept
+    m23           = __to_s(var.http_accept),
+    -- accept_encoding
+    m24  = __to_s(var.http_accept_encoding),
+    -- referer
+    m25          = __to_s(var.http_referer),
+    -- referer_invalid
+    m26  = (var.invalid_referer ~= nil and var.invalid_referer ~= '') and true or false,
+    -- cookie
+    m27           = __to_s(var.http_cookie),
+    -- ua
+    m28               = {
+      -- raw_agent
+      m28a      = __to_s(var.http_user_agent)
+    }
+  },
+  -- resp
+  n = {
+    -- status
+    n1           = tonumber(var.status),
+    -- gzip_ratio
+    n2       = __to_n(var.gzip_ratio),
+    -- bytes
+    n3            = tonumber(var.bytes_sent) or 0,
+    -- bytes_kb
+    n4         = tonumber(string.format("%.4f", (var.bytes_sent or 0)/1024.0)) or 0,
+    -- body_bytes
+    n5         = tonumber(string.format("%.6f", (var.bytes_sent or 0)/1024.0/1024.0)) or 0,
+    -- body_bytes
+    n6       = __to_n(var.body_bytes_sent, 0),
+    -- content_length
+    n7   = __to_n(var.sent_http_content_length, 0),
+    -- content_type
+    n8     = __to_s(var.sent_http_content_type),
+    -- content_encoding
+    n9 = __to_s(var.sent_http_content_encoding),
+    -- pragma
+    n10           = __to_s(var.sent_http_pragma),
+    -- cache_control
+    n11    = __to_s(var.sent_http_cache_control),
+    -- keepalive
+    n12        = __to_s(var.sent_http_keep_alive),
+    -- connection
+    n13       = __to_s(var.sent_http_connection),
+    -- location
+    n14         = __to_s(var.sent_http_location),
+    -- content_security_policy
+    n15 = __to_s(var.sent_http_content_security_policy),
+    -- p3p
+    n16              = __to_s(var.sent_http_p3p),
+    -- via
+    n17              = __to_s(var.sent_http_via),
+    -- transfer_encoding
+    n18 = __to_s(var.sent_http_transfer_encoding),
+    -- cache_status
+    n19     = var.srcache_fetch_status .. '-' .. var.srcache_store_status
+  }
+}
+
 local up = nil
 if upstream_addr ~= nil then
   up = {}
@@ -35,145 +203,85 @@ if upstream_addr ~= nil then
     _uuct = __to_n(uuct[i])
     table.insert(up,
       {
-        addr              = _ip,
-        port              = __to_n(_port, 80),
-        status            = __to_n(uus[i]),
-        body_bytes_length = __to_n(uurl[i]),
-        bytes_received    = __to_n(uubr[i]),
-        response_time_ms  = _uurt ~= nil and math.floor(_uurt * 1000) or nil,
-        header_time_ms    = _uuht ~= nil and math.floor(_uuht * 1000) or nil,
-        connect_time_ms   = _uuct ~= nil and math.floor(_uuct * 1000) or nil
+        -- addr
+        n21a = _ip,
+        -- port
+        n21b = __to_n(_port, 80),
+        -- status
+        n21c = __to_n(uus[i]),
+        -- body_bytes_length
+        n21d = __to_n(uurl[i]),
+        -- bytes_received
+        n21e = __to_n(uubr[i]),
+        -- response_time_ms
+        n21f = _uurt ~= nil and math.floor(_uurt * 1000) or nil,
+        -- header_time_ms
+        n21g = _uuht ~= nil and math.floor(_uuht * 1000) or nil,
+        -- connect_time_ms
+        n21h = _uuct ~= nil and math.floor(_uuct * 1000) or nil,
+        -- priority
+        n21i = 0 - table.getn(up)
+
       }
     )
   end
+  -- upstream_server
+  log_json['n']['n20'] = __to_s(var.upstream_http_server)
+  -- upstream
+  log_json['n']['n21'] = up
+  -- upstream_trials
+  log_json['n']['n22'] = count
 end
 
--- local server_log_json = {
---   program          = 'nginx',
---   version          = __to_s(var.nginx_version),
---   pid              = tonumber(var.pid),
---   hostname         = __to_s(var.hostname),
---   status = {
---     active         = tonumber(var.connections_active),
---     reading        = tonumber(var.connections_reading),
---     writing        = tonumber(var.connections_writing),
---     waiting        = tonumber(var.connections_waiting)
---   }
--- }
--- server_log(cjson.encode(server_log_json))
-
-local log_json = {
-  time_local         = var.time_local,
-  time_iso8601       = var.time_iso8601,
-  request_at_ms      = math.floor(tonumber(var.msec) * 1000),
-  request_time_ms    = math.floor(tonumber(var.request_time) * 1000),
-  resource_id        = __to_n(var._resource_id),
-  https              = https,
-  http2              = __to_s(var.http2),
-  cdnhost            = '{{ inventory_hostname_short }}',
-  server = {
-    program          = 'nginx'
-  },
-  vhost = {
-    name             = __to_s(var.server_name),
-    addr             = var.server_addr,
-    port             = tonumber(var.server_port)
-  },
-  conn = {
-    id               = tonumber(var.connection),
-    requests         = tonumber(var.connection_requests)
-  },
-  tcpinfo = {
-    rtt              = tonumber(var.tcpinfo_rtt),
-    rttvar           = tonumber(var.tcpinfo_rttvar),
-    snd_cwnd         = tonumber(var.tcpinfo_snd_cwnd),
-    rcv_space        = tonumber(var.tcpinfo_rcv_space)
-  },
-  req = {
-    id               = var.request_id,
-    completion       = var.request_completion,
-    length           = __to_n(var.request_length, 0),
-    pipe             = var.pipe == 'p' and true or false,
-    host             = __to_s(var.host),
-    client_ip        = var.remote_addr,
-    client_port      = __to_n(var.remote_port),
-    auth             = __to_s(var.remote_user),
-    scheme           = __to_s(var.scheme),
-    protocol         = __to_s(var.server_protocol),
-    verb             = __to_s(var.request_method),
-    uri              = __to_s(var.uri),
-    raw_uri          = __to_s(raw_uri),
-    file_ext         = __to_s(file_ext),
-    query_string     = __to_s(var.query_string),
-    filename         = __to_s(var.request_filename),
-    content_length   = __to_n(var.content_length),
-    content_type     = __to_s(var.content_type),
-    range            = __to_s(var.http_range),
-    pragma           = __to_s(var.http_pragma),
-    cache_control    = __to_s(var.http_cache_control),
-    connection       = __to_s(var.http_connection),
-    accept           = __to_s(var.http_accept),
-    accept_encoding  = __to_s(var.http_accept_encoding),
-    referer          = __to_s(var.http_referer),
-    referer_invalid  = (var.invalid_referer ~= nil and var.invalid_referer ~= '') and true or false,
-    cookie           = __to_s(var.http_cookie),
-    ua               = {
-      raw_agent      = __to_s(var.http_user_agent)
-    }
-  },
-  resp = {
-    status           = tonumber(var.status),
-    gzip_ratio       = __to_n(var.gzip_ratio),
-    bytes            = tonumber(var.bytes_sent) or 0,
-    bytes_kb         = tonumber(string.format("%.4f", (var.bytes_sent or 0)/1024.0)) or 0,
-    bytes_mb         = tonumber(string.format("%.6f", (var.bytes_sent or 0)/1024.0/1024.0)) or 0,
-    body_bytes       = __to_n(var.body_bytes_sent, 0),
-    content_length   = __to_n(var.sent_http_content_length, 0),
-    content_type     = __to_s(var.sent_http_content_type),
-    content_encoding = __to_s(var.sent_http_content_encoding),
-    pragma           = __to_s(var.sent_http_pragma),
-    cache_control    = __to_s(var.sent_http_cache_control),
-    keepalive        = __to_s(var.sent_http_keep_alive),
-    connection       = __to_s(var.sent_http_connection),
-    location         = __to_s(var.sent_http_location),
-    content_security_policy = __to_s(var.sent_http_content_security_policy),
-    p3p              = __to_s(var.sent_http_p3p),
-    via              = __to_s(var.sent_http_via),
-    transfer_encoding = __to_s(var.sent_http_transfer_encoding),
-    cache_status     = var.srcache_fetch_status .. '-' .. var.srcache_store_status,
-    upstream_server  = __to_s(var.upstream_http_server),
-    upstream         = up
-  }
-}
 --  if next(up) ~= nil then
   --log_json['upstream'] = up
 --  end
 if https then
-  log_json['ssl'] = {
-    sess_id          = var.ssl_session_id,
-    sess_reused      = var.ssl_session_reused == 'r' and true or false,
-    protocol         = var.ssl_protocol,
-    sni_server_name  = var.ssl_server_name,
-    cipher            = var.ssl_cipher,
-    ciphers_supported = var.ssl_ciphers,
-    client = {
-      curves_supported  = var.ssl_curves,
+  -- ssl
+  log_json['o'] = {
+   -- sess_id
+    o1          = var.ssl_session_id,
+    -- sess_reused
+    o2      = var.ssl_session_reused == 'r' and true or false,
+    -- protocol
+    o3         = var.ssl_protocol,
+    -- sni_server_name
+    o4  = var.ssl_server_name,
+    -- cipher
+    o5            = var.ssl_cipher,
+    -- ciphers_supported
+    o6 = var.ssl_ciphers,
+    -- client
+    o7 = {
+      -- curves_supported
+      o7a  = var.ssl_curves,
       -- client cert vertification
-      verified          = var.ssl_client_verify,
+      -- verified
+      o7b          = var.ssl_client_verify,
       -- client cert
-      cert_start_date   = var.ssl_client_v_start,
-      cert_end_date     = var.ssl_client_v_end,
-      cert_expired_left = var.ssl_client_v_remain,
-      cert_serial       = var.ssl_client_serial,
-      cert_subject_dn   = var.ssl_client_s_dn,
-      cert_subject_dn_legacy = var.ssl_client_s_dn_legacy,
-      cert_issuer_dn    = var.ssl_client_i_dn,
-      cert_issuer_dn_legacy = var.ssl_client_i_dn_legacy,
-      cert_sha1         = var.ssl_client_fingerprint,
-      cert_raw_pem      = var.ssl_client_raw_cert,
-      cert_pem          = var.ssl_client_cert,
+      -- cert_start_date
+      o7c   = var.ssl_client_v_start,
+      -- cert_end_date
+      o7d     = var.ssl_client_v_end,
+      -- cert_expired_left
+      o7e = var.ssl_client_v_remain,
+      -- cert_serial
+      o7f       = var.ssl_client_serial,
+      -- cert_subject_dn
+      o7g   = var.ssl_client_s_dn,
+      -- cert_subject_dn_legacy
+      o7h = var.ssl_client_s_dn_legacy,
+      -- cert_issuer_dn
+      o7i    = var.ssl_client_i_dn,
+      -- cert_issuer_dn_legacy
+      o7j = var.ssl_client_i_dn_legacy,
+      -- cert_sha1
+      o7k         = var.ssl_client_fingerprint,
+      -- cert_raw_pem
+      o7l      = var.ssl_client_raw_cert,
+      -- cert_pem
+      o7m          = var.ssl_client_cert,
     }
   }
 end
-local msg = cjson.encode(log_json)
-es_log(es_access_logger, msg)
+es_log(es_access_logger, log_json)
