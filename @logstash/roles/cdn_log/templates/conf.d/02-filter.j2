@@ -23,11 +23,12 @@ filter {
     grok {
       pattern_definitions => {
         "NGX_ERR_TIMESTAMP" => "%{YEAR}/%{MONTHNUM}/%{MONTHDAY} %{TIME}"
+        "NGX_IPORWHOST" => "(?:%{IP}|(?:\*\.)?\.?%{HOSTNAME})"
       }
       match => {
-        "message" => "<%{NONNEGINT:syslog_pri}>%{SPACE}%{SYSLOGTIMESTAMP:timestamp} %{SYSLOGHOST:logsource} %{SYSLOGPROG}: %{NGX_ERR_TIMESTAMP:ngx_errlog_timestamp} \[%{LOGLEVEL:level}\] %{POSINT:ngx_pid}#%{POSINT:ngx_tid}: \*%{POSINT:ngx_cid} %{GREEDYDATA:message}"
+        "message" => "(?m)<%{NONNEGINT:syslog_pri}>%{SPACE}%{SYSLOGTIMESTAMP:timestamp} %{SYSLOGHOST:logsource} %{SYSLOGPROG}: %{NGX_ERR_TIMESTAMP:ngx_errlog_timestamp} \[%{LOGLEVEL:level}\] %{POSINT:ngx_pid}#%{POSINT:ngx_tid}: \*%{POSINT:ngx_cid} %{DATA:errmsg}, client: %{IP:client_ip}?, server: (?:%{NGX_IPORWHOST:vhost_name}(?::%{POSINT:vhost_port})?)?(?:, request: \"(?:%{WORD:verb} %{NOTSPACE:request}(?: HTTP/%{NUMBER:httpversion})?|%{DATA:rawrequest})\")?(?:, subrequest: \"%{URIPATH:subrequest}\")?(?:, upstream: \"%{NOTSPACE:upstream}\")?(?:, host: \"%{IPORHOST:host}(?::%{POSINT:port})?\")?(?:, referrer: \"%{URI:referrer}\")?"
       }
-      overwrite => [ "message" ]
+      #overwrite => [ "message" ]
     }
     syslog_pri {
       syslog_pri_field_name => "syslog_pri"
