@@ -79,7 +79,7 @@
     - name: Env | Propagate deletion set, and check set
       set_fact:
         resource: "{{ res }}"
-        do_check: "{{ res | difference(_del_set) }}"
+        do_check: "{{ res | difference(_del_set) | list }}"
         cus_del: "{{ _del_set }}"
       vars:
         res: "{{ output.json['resources']  }}"
