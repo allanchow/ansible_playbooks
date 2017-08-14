@@ -289,7 +289,7 @@
   gather_facts: False
 
   vars:
-    cus_add: "{{ hostvars['localhost']['cus_add']  | default([]) }}"
+    cus_add: "{{ hostvars['localhost']['cus_add'] | default([]) }}"
     cus_update: "{{ hostvars['localhost']['cus_update'] | default([]) }}"
     cus_del: "{{ hostvars['localhost']['cus_del'] | default([]) }}"
     cus_active: "{{ hostvars['localhost']['cus_active'] | default([])  }}"
