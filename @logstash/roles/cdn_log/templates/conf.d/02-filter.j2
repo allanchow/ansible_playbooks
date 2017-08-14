@@ -298,7 +298,7 @@ filter {
     cidr {
       add_tag => [ "private_ip" ]
       address => [ "%{[req][client_ip]}" ]
-      network => [ "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+      network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
     }
     if "private_ip" not in [tags] and "allbrightnet" not in [tags] {
       geoip {
