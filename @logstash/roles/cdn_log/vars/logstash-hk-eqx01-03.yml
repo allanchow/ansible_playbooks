@@ -1,0 +1,38 @@
+---
+access_log:
+  templatename: ngx-access-cdn
+  inputs:
+    udp:
+      - host: 192.168.101.202
+        port: "{{ cdn.logstash.access_log.udp.port }}"
+      - host: 192.168.101.169
+        port: "{{ cdn.logstash.access_log.udp.port }}"
+    tcp:
+      - host: 192.168.101.202
+        port: "{{ cdn.logstash.access_log.udp.port }}"
+      - host: 192.168.101.169
+        port: "{{ cdn.logstash.access_log.udp.port }}"
+  outputs:
+    elasticsearch:
+      host:
+        - es-hk-eqx01-master-vip:9200
+    mongodb:
+      host: 192.168.101.159:27217
+      database: logs
+error_log:
+  templatename: ngx-error-cdn
+  inputs:
+    udp:
+      - host: 192.168.101.202
+        port: "{{ cdn.logstash.error_log.udp.port }}"
+      - host: 192.168.101.169
+        port: "{{ cdn.logstash.error_log.udp.port }}"
+    tcp:
+      - host: 192.168.101.202
+        port: "{{ cdn.logstash.error_log.udp.port }}"
+      - host: 192.168.101.169
+        port: "{{ cdn.logstash.error_log.udp.port }}"
+  outputs:
+    elasticsearch:
+      host:
+        - es-hk-eqx01-master-vip:9200

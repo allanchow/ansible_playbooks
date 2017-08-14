@@ -1,0 +1,35 @@
+#!/usr/bin/env ansible-playbook
+---
+- hosts:
+    - "{{ inv }}"
+#    - logstash-hk-eqx01-01
+#    - all_logstash
+  any_errors_fatal: true
+  serial: 2
+  become: true
+
+  pre_tasks:
+    - include: pre_tasks.yml
+
+  roles:
+    - cdn_log
+    - network
+    - api_kong_gw
+#    - packetbeat
+    #- httpguard
+  #
+  # tasks:
+  #   - name: Deploy | Logstash Actions
+  #     shell: "./svc_logstash {{ item }}"
+  #     args:
+  #       chdir: "{{ logstash_root }}"
+  #       executable: /bin/bash
+  #     with_items:
+  #       - update-geo
+  #       - update-ua
+#        - reload cdn_log
+#        - reload netflow
+#        - reload netflow_cdn
+#         - reload network
+    #    - reload api_kong_gw
+#        - reload packetbeat

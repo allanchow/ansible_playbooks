@@ -1,17 +1,17 @@
 ---
-netflow:
-  templatename: netflow
+netflow_cdn:
+  templatename: cdn-netflow
   inputs:
     udp:
       - host: 192.168.101.202
-        port: 9995
-      - host: 192.168.101.107
-        port: 9995
+        port: "{{ softflowd.port }}"
+      - host: 192.168.101.171
+        port: "{{ softflowd.port }}"
     tcp:
       - host: 192.168.101.202
-        port: 9995
-      - host: 192.168.101.107
-        port: 9995
+        port: "{{ softflowd.port }}"
+      - host: 192.168.101.171
+        port: "{{ softflowd.port }}"
   outputs:
     - elasticsearch:
         id: log

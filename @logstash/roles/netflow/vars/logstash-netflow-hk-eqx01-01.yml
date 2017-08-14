@@ -5,12 +5,12 @@ netflow:
     udp:
       - host: 192.168.101.202
         port: 9995
-      - host: 192.168.101.108
+      - host: 192.168.101.170
         port: 9995
     tcp:
       - host: 192.168.101.202
         port: 9995
-      - host: 192.168.101.108
+      - host: 192.168.101.170
         port: 9995
   outputs:
     - elasticsearch:
