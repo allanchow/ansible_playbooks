@@ -2,7 +2,7 @@
 # {{ ansible_managed }}
 
 {% for cdn in cdn_dns %}
-{% if (cdn != "cdn-hk-eqx01-01") and (cdn != "cdn-hk-eqx01-02") %}
+{% if (cdn != "cdn-hk-eqx01-01") or (cdn != "cdn-hk-eqx01-02") %}
 "{{ cdn.ip }}": {{ cdn.name }}
 {% endif %}
 {% endfor %}
