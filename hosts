@@ -12,6 +12,11 @@ all_g1_cdn_us
 all_g1_cdn_sg
 all_g1_cdn_kr
 all_g1_cdn_jp
+all_int_cdn
+
+[all_int_cdn]
+cdn-hk-eqx01-01
+cdn-hk-eqx01-02
 
 [all_g1_cdn_hk]
 cdn-g1-hk-[01:05]

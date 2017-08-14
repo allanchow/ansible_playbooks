@@ -66,17 +66,40 @@ filter {
       }
     }
     if "cdn_landattack" not in [tags] {
-  #    if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-g.*\.allbright(net(work)?\.com|\.local)$/ {
-      cidr {
-        add_tag => [ "cdn_outflow" ]
-        address => [ "%{[netflow][ipv4_src_addr]}" ]
-        network => [ "%{[host]}" ]
+      # CDN
+      translate {
+        field => "[netflow][ipv4_src_addr]"
+        destination => "[netflow][ipv4_src_host]"
+        dictionary_path => "{{ logstash.conf_root }}/cdn_ip_netflow.yml"
+        exact => true
       }
-  #    if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-g.*\.allbright(net(work)?\.com|\.local)$/ {
-      cidr {
-        add_tag => [ "cdn_inflow" ]
-        address => [ "%{[netflow][ipv4_dst_addr]}" ]
-        network => [ "%{[host]}" ]
+      translate {
+        field => "[netflow][ipv4_dst_addr]"
+        destination => "[netflow][ipv4_dst_host]"
+        dictionary_path => "{{ logstash.conf_root }}/cdn_ip_netflow.yml"
+        exact => true
+      }
+      # cidr {
+      #   add_tag => [ "cdn_outflow" ]
+      #   address => [ "%{[netflow][ipv4_src_addr]}" ]
+      #   network => [ "%{[host]}" ]
+      # }
+      # private src ip may be resolved to our CDN
+      if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-.*$/ {
+        mutate {
+          add_tag => [ "cdn_outflow" ]
+        }
+      }
+      # cidr {
+      #   add_tag => [ "cdn_inflow" ]
+      #   address => [ "%{[netflow][ipv4_dst_addr]}" ]
+      #   network => [ "%{[host]}" ]
+      # }
+      # private dst ip may be resolved to our CDN
+      if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-.*$/ {
+        mutate {
+          add_tag => [ "cdn_inflow" ]
+        }
       }
       # Multicast
       if [netflow][ipv4_src_addr] =~ /^2[2-3][4-9]\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/ {
@@ -103,9 +126,14 @@ filter {
     }
     # src IP Spoofing
     cidr {
-      add_tag => [ "cdn_spoof_src_addr" ]
+      add_tag => [ "private_src_ip" ]
       address => [ "%{[netflow][ipv4_src_addr]}" ]
       network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    }
+    if "private_src_ip" in [tags] and "cdn_outflow" not in [tags] {
+      mutate {
+        add_tag => [ "cdn_spoof_src_addr" ]
+      }
     }
     if "cdn_spoof_src_addr" in [tags] and [netflow][ipv4_src_addr] =~ /\.255$/ {
       mutate {
@@ -113,7 +141,7 @@ filter {
       }
     }
     # src GEO
-    if "cdn_spoof_src_addr" not in [tags] and "cdn_spoof_src_broadcast_domain" not in [tags] and "cdn_outflow_multicast" not in [tags] and "cdn_outflow_broadcast" not in [tags] {
+    if "private_src_ip" not in [tags] and "cdn_spoof_src_broadcast_domain" not in [tags] and "cdn_outflow_multicast" not in [tags] and "cdn_outflow_broadcast" not in [tags] {
       geoip {
         periodic_flush => true
         source => "[netflow][ipv4_src_addr]"
@@ -121,11 +149,19 @@ filter {
         database => "{{ logstash.conf_root }}/{{ db_geo }}"
       }
     }
+    mutate {
+      remove_tag => [ "private_src_ip" ]
+    }
     # dst IP Spoofing
     cidr {
-      add_tag => [ "cdn_spoof_dst_addr" ]
+      add_tag => [ "private_dst_ip" ]
       address => [ "%{[netflow][ipv4_dst_addr]}" ]
       network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    }
+    if "private_dst_ip" in [tags] and "cdn_inflow" not in [tags] {
+      mutate {
+        add_tag => [ "cdn_spoof_dst_addr" ]
+      }
     }
     if "cdn_spoof_dst_addr" in [tags] and [netflow][ipv4_dst_addr] =~ /\.255$/ {
       mutate {
@@ -133,13 +169,16 @@ filter {
       }
     }
     # dst GEO
-    if "cdn_spoof_dst_addr" not in [tags] and "cdn_spoof_dst_broadcast_domain" not in [tags] and "cdn_inflow_multicast" not in [tags] and "cdn_inflow_broadcast" not in [tags] {
+    if "private_dst_ip" not in [tags] and "cdn_spoof_dst_broadcast_domain" not in [tags] and "cdn_inflow_multicast" not in [tags] and "cdn_inflow_broadcast" not in [tags] {
       geoip {
         periodic_flush => true
         source => "[netflow][ipv4_dst_addr]"
         target => "dst_geoip"
         database => "{{ logstash.conf_root }}/{{ db_geo }}"
       }
+    }
+    mutate {
+      remove_tag => [ "private_dst_ip" ]
     }
     translate {
       field => "[netflow][protocol]"

@@ -34,21 +34,21 @@ filter {
     translate {
       field => "[netflow][ipv4_src_addr]"
       destination => "[netflow][ipv4_src_host]"
-      dictionary_path => "{{ logstash.conf_root }}/cdn_ip.yml"
+      dictionary_path => "{{ logstash.conf_root }}/cdn_ip_netflow.yml"
       exact => true
     }
     translate {
       field => "[netflow][ipv4_dst_addr]"
       destination => "[netflow][ipv4_dst_host]"
-      dictionary_path => "{{ logstash.conf_root }}/cdn_ip.yml"
+      dictionary_path => "{{ logstash.conf_root }}/cdn_ip_netflow.yml"
       exact => true
     }
-    if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-g.*$/ {
+    if [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-.*$/ {
       mutate {
         add_tag => [ "cdn_inflow" ]
       }
     }
-    if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-g.*$/ {
+    if [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-.*$/ {
       mutate {
         add_tag => [ "cdn_outflow" ]
       }
@@ -105,6 +105,12 @@ filter {
         remove_tag => [ "private_src_ip" ]
       }
     }
+    # private src ip may be resolved to our CDN
+    if [netflow][ipv4_src_host] and [netflow][ipv4_src_host] =~ /(?i)^(uat-)?cdn-.*/ {
+      mutate {
+        remove_tag => [ "private_src_ip" ]
+      }
+    }
     cidr {
       add_tag => [ "private_dst_ip" ]
       address => [ "%{[netflow][ipv4_dst_addr]}" ]
@@ -115,6 +121,12 @@ filter {
         source => "[netflow][ipv4_dst_addr]"
         target => "dst_geoip"
         database => "{{ logstash.conf_root }}/{{ db_geo }}"
+        remove_tag => [ "private_dst_ip" ]
+      }
+    }
+    # private dst ip may be resolved to our CDN
+    if [netflow][ipv4_dst_host] and [netflow][ipv4_dst_host] =~ /(?i)^(uat-)?cdn-.*/ {
+      mutate {
         remove_tag => [ "private_dst_ip" ]
       }
     }
