@@ -398,6 +398,7 @@
     - include: inc.dns.yml
       static: no
       with_items: "{{ cus_add }}"
+      when: cus_add is defined
 
     - name: Portal | return status
       vars:
