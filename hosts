@@ -47,7 +47,10 @@ uat-cdn-g1-jp-01
 #################### All internal VM Host and Group define ####################
 
 [all_logstash]
-logstash-hk-eqx01-[01:02]
+logstash-hk-eqx01-[01:03]
+
+[all_logstash_netflow]
+logstash-netflow-hk-eqx01-[01:02]
 
 [all_tb_logstash]
 logstashuat-hk-eqx01-01
