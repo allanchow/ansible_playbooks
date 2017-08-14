@@ -17,7 +17,7 @@ netflow:
         id: log
         host:
           - eslog-hk-eqx01-01-data:9200
-    - elasticsearch:
-        id: oi
-        host:
-          - esoi-hk-eqx01-01-data:9200
+    # - elasticsearch:
+    #     id: oi
+    #     host:
+    #       - esoi-hk-eqx01-01-data:9200
