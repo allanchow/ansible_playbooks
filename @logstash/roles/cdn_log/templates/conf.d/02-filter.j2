@@ -294,6 +294,12 @@ filter {
         target => "geoip"
         database => "{{ logstash.conf_root }}/{{ db_geo }}"
       }
+      geoip {
+        periodic_flush => true
+        source => "[req][client_ip]"
+        target => "[geoip][asn]"
+        database => "{{ logstash.conf_root }}/{{ db_asn }}"
+      }
     }
     clone {
       clones => [ "access_log_es" ]

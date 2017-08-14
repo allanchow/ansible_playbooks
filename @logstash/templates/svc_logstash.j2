@@ -112,7 +112,7 @@ _signal_nodes_if_found(){
   local siginal=${1:-reload}
   local found=${2}
   pushd  ${LOGSTASH_NODE_BASE} >/dev/null 2>&1
-  for i in $(grep -ir ${found} */conf.d/ -l); do
+  for i in $(egrep -ir ${found} */conf.d/ -l); do
     NODE=$(echo $i | cut -d'/' -f1)
     if [ $(logstash_is_running) -eq 1 ]; then
       echo ${siginal} ${NODE}
@@ -131,10 +131,13 @@ main() {
   CMD=${CMD,,}
   case ${CMD} in
     update-geo)
-      fn() { ${SUDO} sh -c "curl -s http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz | gunzip -c > $1"; }
-      local GEO=GeoLite2-City.mmdb
-      pkg=$(_update_pkg ${GEO} fn)
-      _signal_nodes_if_found force-restart ${GEO}
+      local GEO={{ db_geo }}
+      local ASN={{ db_asn }}
+      fn() { ${SUDO} sh -c "curl -s http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz | gunzip -c > ${1}"; }
+      _update_pkg ${GEO} fn
+      fn() { ${SUDO} sh -c "curl -s http://geolite.maxmind.com/download/geoip/database/GeoLite2-ASN.tar.gz | tar -xz --strip-components=1 --wildcards */${ASN}; mv ${ASN} ${1}"; }
+      _update_pkg ${ASN} fn
+      _signal_nodes_if_found force-restart "(${GEO}|${ASN})"
       #${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${GEO}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
     ;;
     update-ua)
