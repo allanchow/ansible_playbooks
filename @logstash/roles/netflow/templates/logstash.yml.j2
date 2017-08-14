@@ -21,9 +21,10 @@ path:
   data: {{ logstash.nodes_root }}/{{ logstash_nodename }}/data
   logs: {{ logstash.nodes_root }}/{{ logstash_nodename }}/logs
 pipeline:
-  workers: 4
+  workers: 8
   batch:
-    size: 125
+    size: 10000
+    delay: 10
   output:
     workers: 1
   unsafe_shutdown: false
