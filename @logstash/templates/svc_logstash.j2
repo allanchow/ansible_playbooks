@@ -142,7 +142,7 @@ main() {
     ;;
     update-ua)
       fn() { ${SUDO} sh -c "curl -s https://raw.githubusercontent.com/ua-parser/uap-core/master/regexes.yaml > $1"; }
-      local UA=ua_regexes.yaml
+      local UA={{ db_ua }}
       pkg=$(_update_pkg ${UA} fn)
       _signal_nodes_if_found force-restart ${UA}
       #${SUDO} find ${LOGSTASH_NODE_BASE}/*/conf.d -type f -exec sed -i -e "s|${UA}\(\.[[:digit:]]\+\)\?|${pkg}|g" {} +
