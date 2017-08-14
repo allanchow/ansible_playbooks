@@ -100,6 +100,7 @@ http {
   server_tokens                off;
   server_name_in_redirect      off;
   server_names_hash_max_size  2048;
+  server_names_hash_bucket_size 256;
 
   lingering_close               on;
   lingering_time               30s;
