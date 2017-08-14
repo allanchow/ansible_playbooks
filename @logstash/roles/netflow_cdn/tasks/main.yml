@@ -7,6 +7,7 @@
   with_items:
     - logstash-codec-netflow
     - logstash-filter-dns
+    - logstash-filter-translate
 - include_role:
     name: _logstash_copyfiles
   with_items:
