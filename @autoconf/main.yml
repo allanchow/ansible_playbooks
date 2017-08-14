@@ -299,6 +299,8 @@
     - meta: end_play
       when: (cus_add | length == 0 and cus_update | length == 0 and cus_active | length == 0 and cus_del | length == 0) or dryrun | bool == True
 
+    - meta: clear_host_errors
+
     - block:
       - name: Deploy | check connectivity to hosts
         local_action: wait_for
@@ -394,6 +396,8 @@
 
     - meta: end_play
       when: resource | length == 0 or dryrun | bool == True
+
+    - meta: clear_host_errors
 
     - include: inc.dns.yml
       static: no
