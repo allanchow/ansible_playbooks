@@ -95,16 +95,16 @@
         - "{{ (softflowd is defined) | ternary('firewall.d/SH03softflowd.j2', []) }}"
         - "{{ (memcached.connection == 'tcp') | ternary('firewall.d/SH04memcached.j2', []) }}"
         - "{{ proxy_heartbeat_cdn | ternary('firewall.d/SL01heartbeatproxy.j2', []) }}"
-      tags: [firewall]
+      tags: [cdn, firewall]
 
     - name: restart iptables-rules.service
       systemd:
         name: iptables-rules
         state: restarted
-      tags: [firewall]
+      tags: [cdn, firewall]
 
     - include: sysctl.yml
-      tags: [tuning]
+      tags: [cdn, tuning]
 
   # python3-chardet* python3-debian* python3-requests* ssh-import-id*
 # pip install chardet
