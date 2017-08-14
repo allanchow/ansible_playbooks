@@ -58,6 +58,7 @@
       with_items:
         - { src: svc_logstash.j2, dst: "{{ logstash_root }}/svc_logstash", mode: "0755" }
         - { src: cdn_ip.yml.j2, dst: "{{ logstash_root }}/config/cdn_ip.yml", mode: "0644" }
+        - { src: cdn_ip_netflow.yml.j2, dst: "{{ logstash_root }}/config/cdn_ip_netflow.yml", mode: "0644" }
 
     - name: Env | Logstash - Folder Permission
       file:
