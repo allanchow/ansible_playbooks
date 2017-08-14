@@ -224,13 +224,12 @@ filter {
     if [req][client_ip] {
       mutate {
         add_field => {
-          "[req][client_host]" => "%{[req][client_ip]}"
+          #"[req][client_host]" => "%{[req][client_ip]}"
           "gw_ip" => "off1.allbrightnet.com"
-          "cdnhost_ip" => "%{cdnhost}"
         }
       }
       dns {
-        resolve => [ "gw_ip", "cdnhost_ip" ]
+        resolve => [ "gw_ip" ]
         action => "replace"
         hit_cache_ttl => 60
         hit_cache_size => 100
@@ -242,7 +241,7 @@ filter {
         address => [ "%{[req][client_ip]}" ]
         network => [
           # CDN Self
-          "%{cdnhost_ip}",
+          "%{host}",
           # Office Internet Gateway [Dynamic]
           "%{gw_ip}",
           # Office Internet Gateway [Static]
@@ -270,24 +269,30 @@ filter {
           "27.111.185.143"
         ]
       }
-      if "allbrightnet" not in [tags] {
-        dns {
-          reverse => [ "[req][client_host]" ]
-          action => "replace"
-          max_retries => 2
-          hit_cache_ttl => 60
-          hit_cache_size => 5000
-          failed_cache_ttl => 30
-          failed_cache_size => 1000
-        }
+      translate {
+        field => "[req][client_ip]"
+        destination => "[req][client_host]"
+        dictionary_path => "{{ logstash.conf_root }}/cdn_ip.yml"
+        exact => true
+        add_tag => [ "is_allbrightnet" ]
       }
-      if [req][client_host] =~ /(?i)\.allbright(net(work)?\.com|\.local)$/ {
+      if "allbrightnet" not in [tags] and "is_allbrightnet" in [tags] and [req][client_host] =~ /(?i)^(uat-)?cdn-.*$/ {
         mutate {
           add_tag => [ "allbrightnet" ]
         }
+      #   dns {
+      #     reverse => [ "[req][client_host]" ]
+      #     action => "replace"
+      #     max_retries => 2
+      #     hit_cache_ttl => 60
+      #     hit_cache_size => 5000
+      #     failed_cache_ttl => 30
+      #     failed_cache_size => 1000
+      #   }
       }
       mutate {
-        remove_field => [ "gw_ip", "cdnhost_ip" ]
+        remove_field => [ "gw_ip" ]
+        remove_tag => [ "is_allbrightnet" ]
       }
     }
     cidr {
