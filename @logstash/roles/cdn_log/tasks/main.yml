@@ -8,6 +8,8 @@
     - logstash-filter-dns
     - logstash-filter-cidr
     - logstash-filter-tld
+    - logstash-filter-translate
+    - logstash-filter-syslog_pri
     - logstash-output-mongodb
     - logstash-codec-compress_spooler
 
