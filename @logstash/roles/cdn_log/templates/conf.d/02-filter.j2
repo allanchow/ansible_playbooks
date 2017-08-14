@@ -206,6 +206,12 @@ filter {
     #     target => "[req][host][tld]"
     #   }
     # }
+    if [req][host] {
+      tld {
+        source => "[req][host]"
+        target => "[req][tld]"
+      }
+    }
     if [req][ua][raw_agent] {
       useragent {
          source => "[req][ua][raw_agent]"

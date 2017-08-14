@@ -7,7 +7,7 @@
   with_items:
     - logstash-filter-dns
     - logstash-filter-cidr
-    # - logstash-filter-tld
+    - logstash-filter-tld
     - logstash-output-mongodb
     - logstash-codec-compress_spooler
 
