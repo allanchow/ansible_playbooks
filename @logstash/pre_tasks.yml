@@ -12,6 +12,14 @@
 #   service: name=rng-tools state=started
 #   when: rdrang_support | succeeded
 
+- name: Env | Get net.core.rmem_max
+  shell: sysctl -n net.core.rmem_max
+  register: rmem_max_out
+  changed_when: False
+
+- set_fact:
+    net_core_rmem_max: "{{ rmem_max_out.stdout | int }}"
+
 - name: Env | Sys - Get System Max Entropy Size
   shell: cat /proc/sys/kernel/random/poolsize
   changed_when: False

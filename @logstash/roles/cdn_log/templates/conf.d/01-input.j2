@@ -10,8 +10,7 @@ input {
     workers => 10
     queue_size => 300000
     buffer_size => 65535
-    # 25Mb, net.core.rmem_max
-    receive_buffer_bytes => 26214400
+    receive_buffer_bytes => {{ net_core_rmem_max }}
     type => access_log
   }
   {% endfor %}
