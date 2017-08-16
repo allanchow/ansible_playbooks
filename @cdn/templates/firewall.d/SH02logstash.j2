@@ -3,3 +3,7 @@
 {% set p = [ cdn.logstash.access_log.udp.port, cdn.logstash.error_log.udp.port ] | join(",") %}
 # Logstash
 $IPT -t mangle -A OUTPUT -p udp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Reliability -m comment --comment "logstash traffic"
+{% if cdn.logstash.access_log.tcp is defined %}
+{% set p = [ cdn.logstash.access_log.tcp.port ] | join(",") %}
+$IPT -t mangle -A OUTPUT -p tcp -m multiport --dport {{ p }} -j TOS --set-tos Maximize-Reliability -m comment --comment "logstash traffic"
+{% endif %}
