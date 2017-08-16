@@ -13,14 +13,26 @@
   with_items:
     - "linux-{{ kernel_type }}{{ hwe_prefix }}"
     - "linux-tools-{{ kernel_type }}{{ hwe_prefix }}"
+  register: ubuntu_kernel
   when: not container
+
+- name: Install grub components
+  apt:
+    name: "{{ item }}"
+    state: "{{ container | ternary('absent', 'present') }}"
+    install_recommends: no
+  with_items:
+    - grub2-common
+
+- include: update-kernel-reboot.yml
+  when: not container and ubuntu_kernel | changed
 
 - name: Upgrade kernel to latest version
   apt:
 #    autoremove: yes
     upgrade: dist
-    install_recommends: no
-  register: ubuntu_kernel
+    # install_recommends: no
+  register: ubuntu_kernel_latest
 
 - name: Minimify Linux installation if it is a virtual server
   apt:
@@ -48,38 +60,8 @@
     - linux-tools-{{ kernel_type }}
   when: hwe_enabled and not container
 
-- name: Install grub components
-  apt:
-    name: "{{ item }}"
-    state: "{{ container | ternary('absent', 'present') }}"
-    install_recommends: no
-  with_items:
-    - grub2-common
-
-- name: Update GRUB
-  command: update-grub
-  changed_when: False
-  failed_when: ('error' in grub_register_update.stderr)
-  register: grub_register_update
-  when: not container and (ubuntu_kernel | changed or ubuntu_minify | changed)
-
-- name: Reboot
-  shell: sleep 2 && shutdown -r now "Ansible reboot"
-  async: 1
-  poll: 0
-  ignore_errors: true
-  register: reboot_result
-  when: not container and (ubuntu_kernel | changed)
-
-- name: Wait for server to come back
-  local_action: wait_for
-  args:
-    host: "{{ ansible_host | default(inventory_hostname_short) }}"
-    port: "{{ ansible_port | default(22) }}"
-    state: started
-    delay: 30
-    timeout: 600
-  when: not container and (reboot_result | changed)
+- include: update-kernel-reboot.yml
+  when: ubuntu_kernel_latest | changed or ubuntu_minify | changed
 
 - name: Remove old kernel images
   shell: for i in $(dpkg -l | cut -d' ' -f3 | tail -n +6 | grep -E 'linux-image-[0-9]+' | grep -Fv $(uname -r)); do apt -y purge $i; done;
