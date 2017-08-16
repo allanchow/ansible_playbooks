@@ -1,4 +1,5 @@
 ---
+iptables_enabled: True
 const:
   port:
     ssh: 22

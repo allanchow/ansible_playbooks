@@ -11,6 +11,7 @@
     - set_fact:
         is_heartbeat_enabled: "{{ mode | d('') == 'prod' and heartbeat is defined }}"
         is_softflowd_enabled: "{{ mode | d('') == 'prod' and softflowd is defined }}"
+        is_iptables_enabled: "{{ inventory_hostname_short | search('-eqx') | bool == false }}"
         is_cdn:               True
       tags: always
 
@@ -28,7 +29,9 @@
     - { role: rc.local,       when: True, tags: [sys, cdn, rc] }
     - { role: pamd,           when: True, tags: [sys, cdn] }
     - { role: services,       when: True, tags: [sys, cdn] }
-    - { role: iptables,       when: True, tags: [cdn, firewall] }
+    - { role: iptables,       when: True, tags: [cdn, firewall],
+        iptables_enabled:     "{{ is_iptables_enabled | bool }}",
+     }
     - { role: tuned_cpu,      when: True, tags: [sys, cdn, tuning] }
     - { role: tuned_network,  when: True, tags: [sys, cdn, tuning],
         sysctl_conf_file:     "{{ sysctl_custom_conf }}"
@@ -89,18 +92,19 @@
         force: yes
       with_flattened:
         - firewall.d/B01default.j2
-        - firewall.d/W01cdn-g1-hk-06.j2
         - firewall.d/SH01cdn.j2
         - "{{ (cdn is defined and cdn.logstash is defined) | ternary('firewall.d/SH02logstash.j2', []) }}"
         - "{{ (softflowd is defined) | ternary('firewall.d/SH03softflowd.j2', []) }}"
         - "{{ (memcached.connection == 'tcp') | ternary('firewall.d/SH04memcached.j2', []) }}"
         - "{{ proxy_heartbeat_cdn | ternary('firewall.d/SL01heartbeatproxy.j2', []) }}"
+      when: is_iptables_enabled
       tags: [cdn, firewall]
 
     - name: restart iptables-rules.service
       systemd:
         name: iptables-rules
         state: restarted
+      when: is_iptables_enabled
       tags: [cdn, firewall]
 
     - include: sysctl.yml
