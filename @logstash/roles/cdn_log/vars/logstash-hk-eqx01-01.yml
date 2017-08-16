@@ -9,9 +9,15 @@ access_log:
         port: "{{ cdn.logstash.access_log.udp.port }}"
     tcp:
       - host: 192.168.101.202
-        port: "{{ cdn.logstash.access_log.udp.port }}"
+        port: "{{ cdn.logstash.access_log.tcp.port }}"
       - host: 192.168.101.107
-        port: "{{ cdn.logstash.access_log.udp.port }}"
+        port: "{{ cdn.logstash.access_log.tcp.port }}"
+    udp_monitor:
+      tcp:
+        - host: 192.168.101.202
+          port: "{{ cdn.logstash.access_log.udp.port }}"
+        - host: 192.168.101.107
+          port: "{{ cdn.logstash.access_log.udp.port }}"
   outputs:
     elasticsearch:
       host:
@@ -27,11 +33,12 @@ error_log:
         port: "{{ cdn.logstash.error_log.udp.port }}"
       - host: 192.168.101.107
         port: "{{ cdn.logstash.error_log.udp.port }}"
-    tcp:
-      - host: 192.168.101.202
-        port: "{{ cdn.logstash.error_log.udp.port }}"
-      - host: 192.168.101.107
-        port: "{{ cdn.logstash.error_log.udp.port }}"
+    udp_monitor:
+      tcp:
+        - host: 192.168.101.202
+          port: "{{ cdn.logstash.error_log.udp.port }}"
+        - host: 192.168.101.107
+          port: "{{ cdn.logstash.error_log.udp.port }}"
   outputs:
     elasticsearch:
       host:

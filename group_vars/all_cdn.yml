@@ -6,6 +6,9 @@ cdn:
       udp:
         host: "{{ logstash.vip.prod }}"
         port: 10514
+      tcp:
+        host: "{{ logstash.vip.prod }}"
+        port: 10614
     error_log:
       udp:
         host: "{{ logstash.vip.prod }}"

@@ -19,6 +19,15 @@ input {
   tcp {
     host => "{{ input.host }}"
     port => {{ input.port }}
+    codec => compress_spooler { spool_size => 4096 }
+    mode => "server"
+    type => access_log
+  }
+  {% endfor %}
+  {% for input in access.inputs.udp_monitor.tcp | default([], True) %}
+  tcp {
+    host => "{{ input.host }}"
+    port => {{ input.port }}
     type => udp_monitor
   }
   {% endfor %}
@@ -30,7 +39,7 @@ input {
     type => error_log
   }
   {% endfor %}
-  {% for input in error.inputs.tcp | default([], True) %}
+  {% for input in error.inputs.udp_monitor.tcp | default([], True) %}
   tcp {
     host => "{{ input.host }}"
     port => {{ input.port }}
