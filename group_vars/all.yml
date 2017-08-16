@@ -11,8 +11,8 @@ logstash:
     dev: 27.111.185.135
 nginx_root: "{{ base_root }}/nginx"
 nginx:
-  # 25M
-  udp_buffer_size: 26214400
+  # 10M
+  drop_limit_buffer_size: 10485760
   tcp_keepalive_pool: 200
   user:            nginx
   sbin_root:      "{{ nginx_root }}"
