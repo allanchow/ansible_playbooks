@@ -13,6 +13,7 @@ all_g1_cdn_sg
 all_g1_cdn_kr
 all_g1_cdn_jp
 all_g1_cdn_th
+all_g1_cdn_vn
 all_int_cdn
 
 [all_int_cdn]
@@ -37,6 +38,9 @@ cdn-g1-jp-01
 
 [all_g1_cdn_th]
 cdn-g1-th-01
+
+[all_g1_cdn_vn]
+cdn-g1-vn-01
 
 [all_g1_tb_cdn]
 #uat-cdn-g1-hk-01
