@@ -7,6 +7,7 @@ local var = ngx.var
 local upstream_addr = var.upstream_addr
 local https = (var.https ~= nil and var.https ~= '') and true or false
 local raw_uri = var.request_uri
+local mppack        = mp.pack
 local file_ext_regex = [[/[^\?#]*\.(?<ext>[^\?#/\.]+)(?:$|[\?#])]]
 local m = ngx.re.match(raw_uri, file_ext_regex, "aisjo")
 local file_ext = m and m['ext'] or ''
@@ -284,11 +285,9 @@ if https then
     }
   }
 end
-local mppack = mp.pack
-local msgc = zlib.deflate()(mppack({{'{{'}}message=log_json{{'}}'}}), 'finish')
-local left = msgc:len() - 1460
-if left > 0 then
-  log_json.m.m27 = '[truncated]'
-  msgc = zlib.deflate()(mppack({{'{{'}}message=log_json{{'}}'}}), 'finish')
+local msgc, eof, in_bytes, out_bytes = zlib.deflate()(mppack({{'{{'}}message=log_json{{'}}'}}), 'finish')
+local logger = es_access_logger_udp
+if es_access_logger_tcp and out_bytes > 1400 then
+  logger = es_access_logger_tcp
 end
-es_log(es_access_logger, msgc)
+es_log(logger, msgc)
