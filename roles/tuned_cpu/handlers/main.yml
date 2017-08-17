@@ -3,3 +3,21 @@
   command: update-grub
   failed_when: ('error' in grub_register_update.stderr)
   register: grub_register_update
+
+- name: Reboot
+  shell: sleep 2 && shutdown -r now "Ansible reboot"
+  async: 1
+  poll: 0
+  ignore_errors: true
+  register: reboot_result
+  when: grub_register_update | succeeded
+
+- name: Wait for server to come back
+  local_action: wait_for
+  args:
+    host: "{{ ansible_host | default(inventory_hostname_short) }}"
+    port: "{{ ansible_port | default(22) }}"
+    state: started
+    delay: 30
+    timeout: 600
+  when: (reboot_result | changed)
