@@ -1,16 +1,18 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
 -- {{ ansible_managed }}
 
-local next  = next
-local split = resty_ngx_re.split
-local var = ngx.var
+local next          = next
+local split         = resty_ngx_re.split
+local var           = ngx.var
 local upstream_addr = var.upstream_addr
-local https = (var.https ~= nil and var.https ~= '') and true or false
-local raw_uri = var.request_uri
+local insert        = table.insert
 local mppack        = mp.pack
+
+local https          = (var.https ~= nil and var.https ~= '') and true or false
+local raw_uri        = var.request_uri
 local file_ext_regex = [[/[^\?#]*\.(?<ext>[^\?#/\.]+)(?:$|[\?#])]]
-local m = ngx.re.match(raw_uri, file_ext_regex, "aisjo")
-local file_ext = m and m['ext'] or ''
+local m              = ngx.re.match(raw_uri, file_ext_regex, "aisjo")
+local file_ext       = m and m['ext'] or ''
 
 -- local server_log_json = {
 --   program          = 'nginx',
@@ -202,7 +204,7 @@ if upstream_addr ~= nil then
     _uurt = __to_n(uurt[i])
     _uuht = __to_n(uuht[i])
     _uuct = __to_n(uuct[i])
-    table.insert(up,
+    insert(up,
       {
         -- addr
         n21a = _ip,
