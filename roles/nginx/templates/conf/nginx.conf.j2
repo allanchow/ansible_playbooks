@@ -141,8 +141,8 @@ http {
 
   postpone_output             1400;  # postpone output unti a MTU is filled up
 
-  resolver                    8.8.8.8 8.8.4.4 valid=60s;
-  resolver_timeout               5s;
+  resolver                    127.0.0.1 valid=60s;
+  resolver_timeout               10s;
 
 #  dav_methods                  off;
   merge_slashes                 on;
