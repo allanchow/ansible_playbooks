@@ -24,6 +24,9 @@ http {
   lua_code_cache               on;
   lua_package_path             "{{ nginx_root }}/modules/?.lua;;";
   lua_package_cpath            "{{ nginx_root }}/modules/lua/?.so;;";
+  lua_socket_pool_size         30;
+  lua_max_running_timers       4096;
+  lua_max_pending_timers       16384;
 
   init_by_lua_file             "{{ nginx.conf_root }}/conf.d/lua_init";
   header_filter_by_lua_file    "{{ nginx.conf_root }}/conf.d/lua_header";
