@@ -30,11 +30,30 @@ filter {
       }
       #overwrite => [ "message" ]
     }
+    if [program] !~ /(?i)^nginx/ { drop {} }
     syslog_pri {
       syslog_pri_field_name => "syslog_pri"
       use_labels => true
     }
-    if [program] !~ /(?i)^nginx/ { drop {} }
+    cidr {
+      add_tag => [ "private_ip" ]
+      address => [ "%{[client_ip]}" ]
+      network => [ "0.0.0.0/8", "10.0.0.0/8", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16" ]
+    }
+    if "private_ip" not in [tags] {
+      geoip {
+        periodic_flush => true
+        source => "[client_ip]"
+        target => "geoip"
+        database => "{{ logstash.conf_root }}/{{ db_geo }}"
+      }
+      geoip {
+        periodic_flush => true
+        source => "[client_ip]"
+        target => "[geoip][asn]"
+        database => "{{ logstash.conf_root }}/{{ db_asn }}"
+      }
+    }
   }
   if [type] == "access_log" {
     # Force to encode message to utf-8 before json parsing

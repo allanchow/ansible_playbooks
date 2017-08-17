@@ -58,7 +58,22 @@
         },
         "ngx_pid": { "type": "long" },
         "ngx_tid": { "type": "long" },
-        "ngx_cid": { "type": "long" }
+        "ngx_cid": { "type": "long" },
+        "client_ip": { "type": "ip" },
+        "geoip": {
+          "dynamic": true,
+          "properties": {
+            "ip": { "type": "ip" },
+            "location": { "type": "geo_point" },
+            "latitude": { "type": "half_float" },
+            "longitude": { "type": "half_float" },
+            "asn": {
+              "properties": {
+                "ip": { "type": "ip" }
+              }
+            }
+          }
+        }
       }
     }
   }
