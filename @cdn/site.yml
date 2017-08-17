@@ -79,6 +79,9 @@
       with_fileglob:
         - templates/firewall.d/*.j2
       tags: [firewall]
+    - name: Ensure firewall.d directory
+      file: path="/etc/systemd/system/firewall.d/" state=directory mode=0755 owner=root group=root
+      tags: [cdn, firewall]
 
     - name: create iptables rules
       vars:
