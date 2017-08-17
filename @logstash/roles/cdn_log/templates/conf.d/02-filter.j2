@@ -222,30 +222,21 @@ filter {
       }
     }
     if [req][client_ip] {
-      mutate {
-        add_field => {
-          #"[req][client_host]" => "%{[req][client_ip]}"
-          "gw_ip" => "off1.allbrightnet.com"
-        }
-      }
-      dns {
-        resolve => [ "gw_ip" ]
-        action => "replace"
-        hit_cache_ttl => 60
-        hit_cache_size => 100
-        failed_cache_ttl => 30
-        failed_cache_size => 100
-      }
+      #mutate {
+      #  add_field => {
+      #    #"[req][client_host]" => "%{[req][client_ip]}"
+      #  }
+      #}
       cidr {
         add_tag => [ "allbrightnet" ]
         address => [ "%{[req][client_ip]}" ]
         network => [
           # CDN Self
           "%{host}",
-          # Office Internet Gateway [Dynamic]
-          "%{gw_ip}",
-          # Office Internet Gateway [Static]
-          "59.149.245.238/30",
+          # Office Internet Gateway
+          {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 %}
+          "{{ ip | resolve }}",
+          {% endfor %}
           # Office Private IP
           "192.168.89.0/24",
           # IDC Equinix HK01 27.111.185.128/28, 27.111.174.58/30
@@ -291,7 +282,6 @@ filter {
       #   }
       }
       mutate {
-        remove_field => [ "gw_ip" ]
         remove_tag => [ "is_allbrightnet" ]
       }
     }
