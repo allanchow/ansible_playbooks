@@ -7,7 +7,7 @@ upstream @{{ res_id }}_upstream {
   {% for o in origin %}
   server {{ o.ip }}:{{ o.port | default(80) | int }}{% if o.weight is defined %} weight={{ o.weight | int }}{% endif %} max_fails=3 fail_timeout=1s;
   {% endfor %}
-  keepalive 10;
+  keepalive 32;
 }
 {% endif %}
 server {
@@ -35,7 +35,7 @@ upstream @{{ res_id }}_upstream_ssl {
   {% for o in origin %}
   server {{ o.ip }}:443{% if o.weight is defined %} weight={{ o.weight | int }}{% endif %} max_fails=3 fail_timeout=1s;
   {% endfor %}
-  keepalive 10;
+  keepalive 32;
 }
 {% endif %}
 server {
