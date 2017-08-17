@@ -43,9 +43,17 @@
     install_recommends: no
   with_items:
     - apt
-    - aptitude
     - apt-transport-https
     - apt-utils
+
+- name: Install aptitude components
+  apt:
+    name: "{{ item }}"
+    state: latest
+    install_recommends: no
+  with_items:
+    - aptitude
+  ignore_errors: yes
 
 - name: Disable apt-daily and prevent dpkg lock
   systemd:
