@@ -20,7 +20,7 @@
     - templates/*.j2
 
 - name: Ensure firewall.d directory
-  file: path=/etc/systemd/system/firewall.d/ state=directory mode=0755 owner=root group=root
+  file: path="/etc/systemd/system/firewall.d/" state=directory mode=0755 owner=root group=root
 
 - name: Ensure iptables-rules.service is running and enabled as configured.
   systemd:
