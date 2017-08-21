@@ -1,0 +1,15 @@
+---
+- file:
+    path: "/proc/sys/{{ param.name  | replace('.', '/') }}"
+    state: file
+  register: exists
+  ignore_errors: True
+
+- name: "Set {{ param.name }} to {{ param.value }}"
+  sysctl:
+    name: "{{ param.name }}"
+    value: "{{ param.value }}"
+    sysctl_set: yes
+    sysctl_file: "{{ sysctl_custom_conf }}"
+    state: present
+  when: exists | succeeded

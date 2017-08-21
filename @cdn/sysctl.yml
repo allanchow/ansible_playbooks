@@ -9,19 +9,14 @@
   vars:
     total_mem: "{{ mempages|int *page_size|int /1024 }}"
     reserved_mem_min_MB: 8
-  sysctl:
-    name: "{{ item.name }}"
-    value: "{{ item.value }}"
-    sysctl_set: yes
-    sysctl_file: "{{ sysctl_custom_conf }}"
-    state: present
+  include: sysctl_set.yml param="{{ item }}"
   with_items:
     - { name: kernel.printk, value: 4 4 1 7 }
     - { name: kernel.panic, value: 10 }
     - { name: kernel.sysrq, value: 0 }
     - { name: kernel.pid_max, value: 65535 }
-    # - { name: kernel.maps_protect, value: 1 }
-    # - { name: kernel.exec-shield, value: 1 }
+    - { name: kernel.maps_protect, value: 1 }
+    - { name: kernel.exec-shield, value: 1 }
     - { name: kernel.randomize_va_space, value: 2 }
     - { name: kernel.yama.ptrace_scope, value: 1 }
     # optimal value
