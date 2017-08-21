@@ -10,17 +10,19 @@
   with_items:
     - { src: tuned-network.j2, dest: /etc/default/tuned-network }
     - { src: tuned-network.service.j2, dest: /etc/systemd/system/tuned-network.service }
+  when: not container
 
 - name: Ensure tuned-network is running and enabled as configured.
   systemd:
     name: "{{ item }}"
-    state: restarted
+    state: "{{ container | ternary('stopped', 'restarted') }}"
     enabled: yes
     daemon_reload: yes
   with_items:
     - systemd-networkd
     - systemd-networkd-wait-online
     - tuned-network.service
+  ignore_errors: True
 
 - name: Refuse responding to broadcasts request
   sysctl:

@@ -8,14 +8,14 @@ After=network.target network-online.target
 ConditionFileIsExecutable=/sbin/ip
 ConditionFileIsExecutable=/sbin/ifconfig
 ConditionFileIsExecutable=/bin/bash
-ConditionFileIsExecutalbe=/sbin/ethtool
+ConditionFileIsExecutable=/sbin/ethtool
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 EnvironmentFile=/etc/default/tuned-network
-ExecStart=/bin/bash -c "for dev in $$(ls -1 /sys/class/net | egrep \"^v?[en|eth]\"); do devname=$${dev##*/}; /sbin/ifconfig $${devname} txqueuelen $TXQUEUELEN; /sbin/ip link set $${devname} multicast off; done; def_r=$$(/sbin/ip route show | grep \"^default\"); /sbin/ip route change $${def_r} initrwnd $INITRWND initcwnd $INITCWND; for i in rx tx other combined; do /sbin/ethtool -L $${devname} $i $(/sbin/ethtool -l $${devname} | grep -i ^$i: | awk -F' ' '{print $2}' | sort -n | head -n 1); done; tc qdisc replace dev $${devname} root mq || tc qdisc replace dev $${devname} root $$(sysctl -n net.core.default_qdisc)"
-ExecStop=/bin/bash -c "for dev in $$(ls -1 /sys/class/net | egrep \"^v?[en|eth]\"); do devname=$${dev##*/}; /sbin/ifconfig $${devname} txqueuelen 1000; /sbin/ip link set $${devname} multicast on; done; def_r=$$(/sbin/ip route show | grep \"^default\"); /sbin/ip route change $${def_r} initrwnd 0 initcwnd 0;"
+ExecStart=/bin/bash -c "for dev in $$(ls -1 /sys/class/net | egrep \"^v?[en|eth]\"); do devname=$${dev##*/}; /sbin/ifconfig $${devname} txqueuelen $TXQUEUELEN; /sbin/ip link set $${devname} multicast off; done; def_r=$$(/sbin/ip route show | grep \"^default\"); /sbin/ip route change $${def_r} initrwnd $INITRWND initcwnd $INITCWND; tc qdisc replace dev $${devname} root mq || tc qdisc replace dev $${devname} root $$(sysctl -n net.core.default_qdisc); /sbin/ethtool -l $${devname} >/dev/null 2>&1 && (for i in rx tx other combined; do /sbin/ethtool -L $${devname} $$i $$(/sbin/ethtool -l $${devname} | grep -i ^$$i: | awk -F' ' '{print $$2}' | sort -n | head -n 1); done;{% if vm | bool %} /sbin/ethtool -K $${devname} tso off gso off{% endif %}) || echo"
+ExecStop=/bin/bash -c "for dev in $$(ls -1 /sys/class/net | egrep \"^v?[en|eth]\"); do devname=$${dev##*/}; /sbin/ifconfig $${devname} txqueuelen 1000; /sbin/ip link set $${devname} multicast on; done; def_r=$$(/sbin/ip route show | grep \"^default\"); /sbin/ip route change $${def_r} initrwnd 0 initcwnd 0;{% if vm | bool %} /sbin/ethtool -l $${devname} >/dev/null 2>&1 && /sbin/ethtool -K $${devname} tso on gso on || echo{% endif %}"
 StandardOutput=null
 StandardError=null
 
@@ -41,7 +41,7 @@ PrivateDevices=true
 
 {% if systemd_service_mgr_version | int >= 183 %}
 # Required for dropping privileges and running as a different user
-#CapabilityBoundingSet=CAP_SETGID CAP_SETUID CAP_SYS_RESOURCE
+CapabilityBoundingSet=CAP_SETGID CAP_SETUID CAP_SYS_RESOURCE
 {% endif %}
 
 {% if systemd_service_mgr_version | int >= 231 and is_seccomp_enabled | bool %}
