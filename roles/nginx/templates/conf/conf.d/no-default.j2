@@ -15,7 +15,7 @@ server {
     gzip on;
     access_log off;
     stub_status on;
-    {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 + ipv4.hk_eqx01_mgmt %}
+    {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 + ipv4.hk_eqx01_mgmt + ipv4.hk_eqx01_service %}
     allow {{ ip | resolve }};
     {% endfor %}
     allow 127.0.0.1;
