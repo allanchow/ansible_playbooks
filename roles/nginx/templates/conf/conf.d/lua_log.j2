@@ -6,6 +6,7 @@ local split         = resty_ngx_re.split
 local var           = ngx.var
 local upstream_addr = var.upstream_addr
 local insert        = table.insert
+local getn          = table.getn
 local mppack        = mp.pack
 
 local https          = (var.https ~= nil and var.https ~= '') and true or false
@@ -223,8 +224,8 @@ if upstream_addr ~= nil then
         -- connect_time_ms
         n21h = _uuct ~= nil and math.floor(_uuct * 1000) or nil,
         -- priority
-        n21i = 0 - table.getn(up)
-
+        --n21i = 0 - table.getn(up)
+        n21i = getn(up) - count + 1
       }
     )
   end
