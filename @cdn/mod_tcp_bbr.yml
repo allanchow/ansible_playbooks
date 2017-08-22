@@ -2,7 +2,7 @@
 - name: tcp_bbr available in kernel config
   shell: grep "CONFIG_TCP_CONG_BBR=[m|y]" /boot/config-$(uname -r) | wc -l
   changed_when: False
-  register: tcp_bbr
+  register: tcp_bbr_config_out
 
 - block:
   - name: Enable systemd-modules-load.service
@@ -41,5 +41,7 @@
     with_items:
       - { name: net.ipv4.tcp_congestion_control, value: bbr }
       - { name: net.core.default_qdisc, value: fq }
+      # don't cache ssthresh from previous connection
+      - { name: net.ipv4.tcp_no_metrics_save, value: 1 }
 
-  when: tcp_bbr.stdout | int == 1
+  when: tcp_bbr_config_out.stdout | int == 1

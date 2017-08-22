@@ -1,9 +1,4 @@
 ---
-- include: "{{ item }}"
-  with_items:
-    - mod_tcp_bbr.yml
-    - mod_rwmem.yml
-
 # ref: https://javapipe.com/ddos/blog/iptables-ddos-protection/
 - name: System tuning
   vars:
@@ -135,7 +130,7 @@
     - { name: net.ipv4.ipfrag_high_thresh, value: 512000 }
     - { name: net.ipv4.ipfrag_low_thresh, value: 446464 }
     # don't cache ssthresh from previous connection
-    - { name: net.ipv4.tcp_no_metrics_save, value: "{{ tcp_bbr.stdout | int == 1 | ternary(1,0) }}" }
+    - { name: net.ipv4.tcp_no_metrics_save, value: 1 }
     # Increase size of RPC datagram queue length
     - { name: net.unix.max_dgram_qlen, value: 50 }
     # Don't allow the arp table to become bigger than this
@@ -164,6 +159,11 @@
     # This will enusre that immediatly subsequent connections use the new values
     - { name: net.ipv4.route.flush, value: 1 }
     - { name: net.ipv6.route.flush, value: 1 }
+
+- include: "{{ item }}"
+  with_items:
+    - mod_tcp_bbr.yml
+    - mod_rwmem.yml
 
 - name: Reload sysctl
   shell: sysctl --system
