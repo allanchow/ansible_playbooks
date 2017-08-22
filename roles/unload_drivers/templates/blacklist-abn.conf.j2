@@ -1,19 +1,9 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
 # {{ ansible_managed }}
 
-# no virtualization
-blacklist kvm
-blacklist kvm_intel
-blacklist kvm_amd
-
-# no power meter
-blacklist acpi_power_meter
-{% if not physical_host %}
-blacklist intel_rapl
-{% endif %}
-
-# nobeep
-blacklist pcspkr
+{% for bd in blacklisted_drivers %}
+blacklist {{ bd }}
+{% endfor %}
 
 # no usb storage devices
 install uas /bin/true

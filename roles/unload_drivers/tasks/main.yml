@@ -2,6 +2,28 @@
 - name: Ensure /etc/modprobe.d
   file: path=/etc/modprobe.d state=directory
 
+- set_fact:
+    blacklisted_drivers:
+      # no virtualization
+      - kvm
+      - kvm_intel
+      - kvm_amd
+      # no power meter
+      - acpi_power_meter
+      - "{{ physical_host | ternary('', 'intel_rapl') }}"
+      - "{{ physical_host | ternary('', 'intel_rapl_perf') }}"
+      # nobeep
+      - pcspkr
+      - bluetooth
+      - joydev
+
+- name: Unload blacklisted drivers
+  shell: "modprobe -r {{ item }}"
+  with_items:
+    - "{{ blacklisted_drivers }}"
+  when: item | length > 0
+  changed_when: False
+
 - name: Blacklist drivers when the root device is mounted
   template:
     src: blacklist-abn.conf.j2

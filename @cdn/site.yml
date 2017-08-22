@@ -19,13 +19,13 @@
     - { role: locales,        when: True, tags: [sys, cdn, locales] }
     - { role: ntp,            when: True, tags: [sys, cdn, ntp] }
     - { role: cron,           when: True, tags: [sys, cdn, cron] }
+    - { role: unload_drivers, when: True, tags: [sys, cdn] }
 #    - { role: dns,            when: True, tags: [cdn, dns] }
     - { role: apt,            when: True, tags: [sys, cdn, apt] }
     - { role: hostname,       when: True, tags: [sys, cdn, hostname] }
     - { role: syspkg,         when: True, tags: [sys, cdn, syspkg] }
     - { role: grub,           when: True, tags: [sys, cdn, grub] }
     - { role: sshd,           when: True, tags: [sys, cdn, sshd] }
-    - { role: unload_drivers, when: True, tags: [sys, cdn] }
     - { role: rc.local,       when: True, tags: [sys, cdn, rc] }
     - { role: pamd,           when: True, tags: [sys, cdn] }
     - { role: services,       when: True, tags: [sys, cdn] }
