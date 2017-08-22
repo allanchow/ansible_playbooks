@@ -44,6 +44,9 @@
     proxy_http_version                1.1;
     proxy_set_header        Connection "";
 
+    # Mitigate httpoxy attack (CVE-2016-5385, CVE-2016-5386, CVE-2016-5387, CVE-2016-5388, CVE-2016-1000109, CVE-2016-1000110, CERT-VU#797896)
+    proxy_set_header             Proxy "";
+
     # proxy_redirect     http:// https://;
     proxy_pass           $scheme://{{ upstream_target }};
     proxy_next_upstream  http_429 http_500 http_502 http_503 http_504 error timeout invalid_header non_idempotent;
