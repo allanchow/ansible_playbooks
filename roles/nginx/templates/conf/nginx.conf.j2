@@ -125,7 +125,7 @@ http {
     end
 
 --    es_access_logger_udp = require "resty.logger.socket_mod"
-    es_access_logger_udp = require "resty.logger.socket1"
+    local es_access_logger_udp = require "resty.logger.socket1"
     if not es_access_logger_udp.initted() then
       local rand = math.random
       local flush = 15 + tonumber(rand(0,10))
@@ -142,12 +142,12 @@ http {
         -- periodic_flush = flush
       }
       if not ok then
-        ngx.log(ngx.ERR, "failed to initialize the es_access_logger_udp:", err)
-        return
+        ngx_log(ngx.ERR, "failed to initialize the es_access_logger_udp:", err)
+--        return
       end
     end
     {% if cdn.logstash.access_log.tcp is defined %}
-    es_access_logger_tcp = require "resty.logger.socket0"
+    local es_access_logger_tcp = require "resty.logger.socket0"
     if not es_access_logger_tcp.initted() then
       local rand = math.random
       local flush = 15 + tonumber(rand(0,10))
@@ -166,33 +166,40 @@ http {
         -- periodic_flush = flush
       }
       if not ok then
-        ngx.log(ngx.ERR, "failed to initialize the es_access_logger_tcp:", err)
-        return
+        ngx_log(ngx.ERR, "failed to initialize the es_access_logger_tcp:", err)
+--        return
       end
     end
     {% endif %}
-    function es_log(logger, msg)
+
+    local len = string.len
+    function es_log(msg, bytes)
+      local out_bytes = bytes or len(msg)
+      local logger = es_access_logger_udp
+      if es_access_logger_tcp and out_bytes > 1400 then
+        logger = es_access_logger_tcp
+      end
       local bytes, err = logger.log(msg)
       if err then
-        ngx.log(ngx.ERR, "failed to log message:", err)
+        ngx_log(ngx.ERR, "failed to log message:", err)
         return
       end
     end
+
     function limit_req(key, shm, rps, burst, extra_delay_on_overburst)
       local limitreq = require "resty.limit.req"
       local exit = ngx.exit
-      local log = ngx.log
       local sleep = ngx.sleep
       local lim, err = limitreq.new(shm, rps, burst)
       if not lim then log(ngx.ERR, "failed to instantiate a resty.limit.req object: ", err); return end
       local delay, err = lim:incoming(key, true)
       if not delay then
         if err == "rejected" then return exit(ngx.HTTP_TOO_MANY_REQUESTS) end
-        log(ngx.ERR, "failed to limit req:", err)
+        ngx_log(ngx.ERR, "failed to limit req:", err)
         return
       end
       if delay > 0 then
-        local excess = err
+--        local excess = err
         sleep(extra_delay_on_overburst+delay)
       end
     end

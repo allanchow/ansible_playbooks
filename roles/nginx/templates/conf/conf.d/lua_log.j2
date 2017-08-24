@@ -8,6 +8,7 @@ local upstream_addr = var.upstream_addr
 local insert        = table.insert
 local getn          = table.getn
 local mppack        = mp.pack
+local zlibc         = zlib.deflate()
 
 local https          = (var.https ~= nil and var.https ~= '') and true or false
 local raw_uri        = var.request_uri
@@ -288,9 +289,10 @@ if https then
     }
   }
 end
-local msgc, eof, in_bytes, out_bytes = zlib.deflate()(mppack({{'{{'}}message=log_json{{'}}'}}), 'finish')
-local logger = es_access_logger_udp
-if es_access_logger_tcp and out_bytes > 1400 then
-  logger = es_access_logger_tcp
-end
-es_log(logger, msgc)
+local msgc, eof, in_bytes, out_bytes = zlibc(mppack({{'{{'}}message=log_json{{'}}'}}), 'finish')
+--local msgc, eof, in_bytes, out_bytes = zlib.deflate()(mppack({{'{{'}}message=log_json{{'}}'}}), 'finish')
+--local logger = es_access_logger_udp
+--if es_access_logger_tcp and out_bytes > 1400 then
+--  logger = es_access_logger_tcp
+--end
+es_log(msgc, out_bytes)
