@@ -10,6 +10,8 @@ server {
   keepalive_timeout 0;
   lingering_close off;
   expires -1;
+  gzip off;
+  sendfile off;
   location = /nginx_status {
     default_type 'text/plain';
     gzip on;
@@ -26,7 +28,12 @@ server {
 server {
   listen 443 ssl default_server;
 #  listen [::]:443 ssl default_server ipv6only=on;
+  keepalive_timeout 0;
+  lingering_close off;
+  expires -1;
   gzip off;
+  brotli off;
+  sendfile off;
   ssl_certificate      {{ nginx.cert_root | basename }}/{{ ssl.default_crt }};
   ssl_certificate_key  {{ nginx.cert_root | basename }}/{{ ssl.default_key }};
   return 444;
