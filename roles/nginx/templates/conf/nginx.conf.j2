@@ -32,7 +32,7 @@ http {
   header_filter_by_lua_file    "{{ nginx.conf_root }}/conf.d/lua_header";
   log_by_lua_file              "{{ nginx.conf_root }}/conf.d/lua_log";
 
-  lua_shared_dict ip_limit_pool 100m;
+  lua_shared_dict ip_limit_pool    100m;
   lua_shared_dict memc_cache       {{ memcached.max_slab_page }};
   lua_shared_dict memc_cache_lock   10m;
 
