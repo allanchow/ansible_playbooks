@@ -11,6 +11,8 @@
   pre_tasks:
     - include: pre_tasks.yml
 
+# https://github.com/jayswan/netflow_tcpflags
+# http://blog.catchpoint.com/2015/10/30/tcp-flags-cwr-ece/
   roles:
     - netflow
     - netflow_cdn
