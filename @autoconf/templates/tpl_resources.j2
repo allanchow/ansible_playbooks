@@ -21,7 +21,7 @@ server {
     proxy_pass http://portal.allbrightnet.com;
   }
   {% if static_caching_enabled %}
-  {% include "data/static_cache.j2" %}
+  {% include "data/static_cache_lua.j2" %}
   {% endif %}
 
   {% include "data/dynamic_cache.j2" %}
@@ -49,7 +49,7 @@ server {
   ssl_certificate     {{ nginx.cert_root | basename }}/{{ res_id }}/{{ cert_pem_name }};
   ssl_certificate_key {{ nginx.cert_root | basename }}/{{ res_id }}/{{ key_pem_name }};
   {% if static_caching_enabled %}
-  {% include "data/static_cache.j2" %}
+  {% include "data/static_cache_lua.j2" %}
   {% endif %}
 
   {% include "data/dynamic_cache.j2" %}

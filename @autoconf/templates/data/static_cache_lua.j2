@@ -1,0 +1,79 @@
+
+  location = /memc {
+    internal;
+    client_max_body_size    {{ memcached.max_slab_page }};
+    client_body_buffer_size {{ memcached.max_slab_page }};
+    content_by_lua_block {
+      local ngx_req = ngx.req
+      local key = ngx.var.query_string
+      local method = ngx_req.get_method()
+      if method == 'GET' then
+        local ret = srmem_get(key)
+        ngx.exit(ret)
+      elseif method == 'PUT' then
+        srmem_set(key, ngx_req, {{ cache_exp_sec}})
+      else
+        ngx.exit(ngx.HTTP_NOT_ALLOWED)
+      end
+    }
+  }
+  location ~* \.(?:{{ file_type | join("|") }})$ {
+    # srcache-nginx-module
+    set_escape_uri   $escaped_request_uri "ngx_{{ host_header }}$request_uri$args$http_range";
+    set              $key $escaped_request_uri;
+    srcache_fetch                   GET /memc $key;
+    srcache_store                   PUT /memc $key;
+    srcache_store_statuses          200 301 302;
+    srcache_store_ranges            on;
+    srcache_store_max_size          {{ memcached.max_slab_page }};       # should match to memcached -I settings
+    srcache_methods                 GET HEAD;
+    srcache_request_cache_control   off;
+    srcache_response_cache_control  on;
+    srcache_store_no_store          off;
+    srcache_store_no_cache          off;
+    srcache_store_private           off;
+    srcache_default_expire          {{ cache_exp_sec }}s;
+
+    add_header X-Cached-Status $srcache_fetch_status-$srcache_store_status;
+
+#    add_header Access-Control-Allow-Origin *;
+#    add_header Timing-Allow-Origin *;
+
+# localized proxy_set_header will override all global proxy_set_header directives
+    proxy_set_header   Host {{ host_header }};
+    proxy_set_header   Accept-Encoding "";
+
+    # Reverse proxy settings
+    proxy_redirect off;
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-Ssl   $https;
+
+    proxy_http_version                1.1;
+    proxy_set_header        Connection "";
+
+    # Mitigate httpoxy attack (CVE-2016-5385, CVE-2016-5386, CVE-2016-5387, CVE-2016-5388, CVE-2016-1000109, CVE-2016-1000110, CERT-VU#797896)
+    proxy_set_header             Proxy "";
+
+    # proxy_redirect     http:// https://;
+    proxy_pass           $scheme://{{ upstream_target }};
+    proxy_next_upstream  http_429 http_500 http_502 http_503 http_504 error timeout invalid_header non_idempotent;
+      # the total next upstream chain timeout:
+    # the value >= the number of upstream target / proxy_connect_timeout
+    proxy_next_upstream_timeout       60s;
+
+    proxy_connect_timeout              5s;
+    proxy_send_timeout                 5m;
+    proxy_read_timeout                 5m;
+
+    proxy_buffering                    on;
+    proxy_buffer_size                  4k;
+    proxy_buffers                   4 32k;
+    proxy_busy_buffers_size           64k;
+    proxy_max_temp_file_size            0;
+
+    sendfile                           on;
+    tcp_nopush                         on;
+    aio                                on;
+  }
