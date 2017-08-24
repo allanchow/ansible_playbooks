@@ -55,6 +55,7 @@ ipv4:
 
 #cdn_suffix: .allbrightnetwork.com
 softflowd:
+  #ip: 27.111.185.128
   ip: "{{ logstash.vip.prod }}"
   port: 9996
   maxflow: 17000
