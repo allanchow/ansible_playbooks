@@ -147,9 +147,20 @@
     - nginx.service.j2
   register: nginx_srv
 
-- name: Ensure nginx is running and enabled as configured.
+- name: Ensure nginx is enabled as configured.
   systemd:
     name: nginx.service
-    state: "{{ (nginx_srv | changed) | ternary('restarted', 'started') }}"
     daemon_reload: yes
     enabled: yes
+
+- name: Chown nginx generated dirs
+  shell: "chown -R {{ nginx.user }}:{{ nginx.user }} {{ nginx_root }}/*_temp"
+  changed_when: False
+
+#
+# - name: Ensure nginx is running and enabled as configured.
+#   systemd:
+#     name: nginx.service
+#     state: "{{ (nginx_srv | changed) | ternary('restarted', 'started') }}"
+#     daemon_reload: yes
+#     enabled: yes
