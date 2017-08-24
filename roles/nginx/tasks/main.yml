@@ -132,7 +132,7 @@
 #     chdir: "{{ nginx_root }}"
 #     executable: /bin/bash
 
-- shell: "mv /usr/local/nginx/{{ ngx_binary }} /usr/local/nginx/nginx"
+- shell: "mv {{ nginx_root }}/{{ ngx_binary }} {{ nginx_root }}/nginx"
 
 
 - name: Generate nginx.service
