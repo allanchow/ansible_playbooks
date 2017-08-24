@@ -1,6 +1,16 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
 # {{ ansible_managed }}
 
+#
+# ExecStop sends SIGSTOP (graceful stop) to the nginx process.
+# If, after 5s (--retry QUIT/5) nginx is still running, systemd takes control
+# and sends SIGTERM (fast shutdown) to the main process.
+# After another 5s (TimeoutStopSec=5), and if nginx is alive, systemd sends
+# SIGKILL to all the remaining processes in the process group (KillMode=mixed).
+#
+# nginx signals reference doc:
+# http://nginx.org/en/docs/control.html
+
 [Unit]
 Description=nginx daemon
 Requires=memcached.service
@@ -23,7 +33,9 @@ ExecStartPre=/bin/bash -c "sysctl -w net.ipv4.tcp_rmem='4096 4194304 16777216'"
 ExecStartPre=/bin/bash -c "sysctl -w net.ipv4.tcp_wmem='4096 4194304 16777216'"
 ExecStart={{ base_root }}/nginx/nginx -g "pid /var/run/nginx.pid; daemon on; master_process on; worker_processes ${NGX_WORKERS}; worker_cpu_affinity auto ${NGX_WORKER_AFFINITY}; user {{ nginx.user }} {{ nginx.user }}; thread_pool default threads=${NGX_THREAD_POOL} max_queue=65535;"
 ExecReload=/bin/kill -s HUP $MAINPID
-ExecStop=/bin/kill -s QUIT $MAINPID
+ExecStop=/sbin/start-stop-daemon --quiet --stop --retry QUIT/5 --pidfile /var/run/nginx.pid
+TimeoutStopSec=5
+KillMode=mixed
 
 StandardOutput=null
 StandardError=null
