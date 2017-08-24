@@ -251,10 +251,29 @@ http {
   directio                      8m;
   directio_alignment            {{ pbsz }};
 
-  send_timeout                 10s;
-  reset_timedout_connection     on;
+# sendfile is useful for lower latency as it bypasses userspace stack => zero copy
   sendfile                      on;
-  sendfile_max_chunk          512k;
+
+# time out between successive write operations
+# if the tcp_wmem init value is too large and client cannot drain the socket buffer
+# faster than the send_timeout, the client connection will be closed.
+# It is desirable to shorten the time in normal, but it will hinder the large file
+# download operation
+# html => lower send_timeout, lower tcp_wmem
+# static assets => higher send_timeout, higher tcp_wmem
+  send_timeout                 10s;
+
+# Lower send_timeout could help to protect the web server that allow more connections
+# Higher tcp_wmem will higher throughtput
+# To adapt this criteria, any unacknowledged data in the socket buffer is determined
+# when send_timeout reaches. If the line is above the min send rate, keep sending rather
+# than close the connections
+  send_minimum_rate            10k;  # Bps
+
+#  sendfile_max_chunk          512k;
+
+# set RST abrutly
+  reset_timedout_connection     on;
 
   tcp_nopush                   off;
   output_buffers            1  32k;
