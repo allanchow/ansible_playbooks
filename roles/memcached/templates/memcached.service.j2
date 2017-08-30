@@ -21,7 +21,7 @@ PermissionsStartOnly=true
 ExecStartPre=/bin/mkdir -p {{ memcached_socket | dirname }}
 ExecStartPre=/bin/chown {{ memcached_user }}:{{ memcached_user }} {{ memcached_socket | dirname }}
 {% endif %}
-ExecStart={{ base_root }}/bin/memcached -d -P /var/run/memcached/memcached.pid -u {{ memcached_user }} -m $CACHESIZE -c $MAXCONN $OPTIONS
+ExecStart={{ base_root }}/bin/memcached -d -P /var/run/memcached/memcached.pid -u {{ memcached_user }} -m $CACHESIZE -t $NUM_THREADS -c $MAX_CONN -R $REQS_PER_EVENT $OPTIONS
 
 StandardOutput=null
 StandardError=null

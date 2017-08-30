@@ -2,5 +2,7 @@
 # {{ ansible_managed }}
 
 CACHESIZE={{ (ansible_memtotal_mb * 0.8) | int }}
-MAXCONN={{ memcached_maxconn }}
-OPTIONS="-t 4 -I {{ memcached_maxslab }} -C -b {{ memcached_backlog }} -r -o modern {{ via }}"
+MAX_CONN={{ memcached_max_conn }}
+NUM_THREADS={{ memcached_threads }}
+REQS_PER_EVENT={{ memcached_reqs_per_event }}
+OPTIONS="-I {{ memcached_maxslab }} -b {{ memcached_backlog }} -r -o modern {{ via }}"

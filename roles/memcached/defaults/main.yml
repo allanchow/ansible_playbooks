@@ -1,11 +1,13 @@
 ---
 memcached_enabled: True
-memcached_maxconn: 1024,
+memcached_max_conn: 1024,
 memcached_maxslab: 1m,
 memcached_backlog: 2048,
 memcached_tcp: True
 memcached_tcp_ip: 127.0.0.1
 memcached_tcp_port: 11211
 memcached_socket:
+memcached_threads: 4
+memcached_reqs_per_event: 20
 
 memcached_user: memcached

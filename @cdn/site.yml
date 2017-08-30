@@ -47,13 +47,14 @@
         softflowd_opts:        "{{ softflowd.options }}"
       }
     - { role: memcached,      when: True, tags: [cdn, memcached],
-        memcached_enabled:    "{{ is_cdn | bool }}",
-        memcached_maxconn:    "{{ memcached.maxconn }}",
-        memcached_maxslab:    "{{ memcached.max_slab_page }}",
-        memcached_backlog:    "{{ memcached.backlog_queue_limit }}",
-        memcached_tcp:        False,
-        memcached_socket:     "{{ memcached.unix.socket }}",
-        memcached_user:       "{{ memcached.user}}" }
+        memcached_enabled:        "{{ is_cdn | bool }}",
+        memcached_max_conn:       "{{ memcached.max_conn }}",
+        memcached_reqs_per_event: "{{ memcached.reqs_per_event }}",
+        memcached_maxslab:        "{{ memcached.max_slab_page }}",
+        memcached_backlog:        "{{ memcached.backlog_queue_limit }}",
+        memcached_tcp:            False,
+        memcached_socket:         "{{ memcached.unix.socket }}",
+        memcached_user:           "{{ memcached.user}}" }
     - { role: nginx,          when: True, tags: [cdn, nginx],
         nginx_enabled:        "{{ is_cdn | bool }}",
       }

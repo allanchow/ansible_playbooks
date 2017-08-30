@@ -82,7 +82,8 @@ memcached:
 #  path: "{{ base_root }}/memcached"
   default_ttl: 1800
   max_slab_page: 100m
-  maxconn: 102400
+  max_conn: 102400
+  reqs_per_event: 50
   backlog_queue_limit: 4096
   connection: unix
   tcp:
