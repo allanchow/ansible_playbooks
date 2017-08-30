@@ -189,7 +189,21 @@ http {
     end
   }
   access_by_lua_block {
-    limit_req(ngx.var.binary_remote_addr, "ip_limit_pool", 500, 50, 1)
+    local range              = ngx.var.http_range
+    local binary_remote_addr = ngx.var.binary_remote_addr
+
+    -- CVE-2015-1635, if it matches a string of 10 or more integers, remove it
+    if range then
+      local find          = ngx.re.find
+      -- the max byte range is ~ 953M
+      local from, to, err = find(range, [[\d{10,}]], "isjou")
+      if from then
+        ngx.log(ngx.WARN, "CVE-2015-1635, bad range: ", range)
+        return ngx.exit(ngx.HTTP_BAD_REQUEST)
+      end
+    end
+
+    limit_req(binary_remote_addr, "ip_limit_pool", 1000, 50, 1)
   }
 
   #access_by_lua_file           "/usr/local/nginx/modules/l7/runtime.lua";
@@ -306,10 +320,6 @@ http {
     default "";
     "https" "_ssl";
   }
-  #CVE-2015-1635, if it matches a string of 10 or more integers, remove it
-  map $http_range $_is_safe_range {
-    default    1;
-    "~\d{10,}" 0;
   }
 
   error_page     400 =444;
