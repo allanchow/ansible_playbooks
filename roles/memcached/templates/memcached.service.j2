@@ -4,7 +4,6 @@
 [Unit]
 Description=memcached daemon
 After=syslog.target network.target remote-fs.target nss-lookup.target
-Before=nginx.service
 ConditionFileIsExecutable={{ base_root }}/bin/memcached
 
 [Service]

@@ -13,8 +13,7 @@
 
 [Unit]
 Description=nginx daemon
-Requires=memcached.service
-After=syslog.target network.target remote-fs.target nss-lookup.target memcached.service
+After=syslog.target network.target remote-fs.target nss-lookup.target
 ConditionFileIsExecutable={{ base_root }}/nginx/nginx
 
 [Service]
