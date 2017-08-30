@@ -42,7 +42,7 @@ function __to_n(n, def)
   def = def or nil
   if n == nil then return def end
   n = trim(n)
-  return n == '' and def or tonumber(n)
+  return n == '' and nil or tonumber(n)
 end
 function __to_s(s, def)
   def = def or nil
