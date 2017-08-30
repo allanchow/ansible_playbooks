@@ -6,8 +6,9 @@
   }
   location ~* \.(?:{{ file_type | join("|") }})$ {
     # srcache-nginx-module
-    set_escape_uri   $escaped_request_uri "ngx_{{ host_header }}$request_uri$args$http_range";
-    set              $key $escaped_request_uri;
+    #set_escape_uri   $escaped_request_uri "ngx_{{ host_header }}$request_uri$args$http_range";
+    #set              $key $escaped_request_uri;
+    set_md5           $key "ngx_{{ host_header }}$request_uri$args$http_range";
     srcache_fetch                   GET /memc $key;
     srcache_store                   PUT /memc $key;
     srcache_store_statuses          200 301 302;
