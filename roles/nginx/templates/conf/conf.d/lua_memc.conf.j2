@@ -1,0 +1,46 @@
+client_max_body_size    {{ memcached.max_slab_page }};
+client_body_buffer_size {{ memcached.max_slab_page }};
+lingering_close             always;
+keepalive_timeout                0;
+lua_socket_connect_timeout   100ms;
+lua_socket_send_timeout      100ms;
+lua_socket_read_timeout      100ms;
+lua_socket_keepalive_timeout     0;
+lua_check_client_abort          on;
+reset_timedout_connection      off;
+
+content_by_lua_block {
+  local ngx_var = ngx.var
+  local ngx_req = ngx.req
+  local exit = ngx.exit
+  local ngx_log = ngx.log
+  local ERR = ngx.ERR
+  local ctx = ngx.ctx
+
+  local key = ngx_var.query_string
+  if key == nil then
+    exit(ngx.HTTP_NOT_FOUND)
+  end
+  local method = ngx_req.get_method()
+  if method == 'GET' then
+    local value, err = memc_fetch(ctx, key)
+    if err then
+      ngx_log(ERR, "failed to get: ", err)
+      return exit(ngx.HTTP_SERVICE_UNAVAILABLE)
+    end
+    if value == nil then
+      return exit(ngx.HTTP_NOT_FOUND)
+    end
+    ngx.print(value)
+  elseif method == 'PUT' then
+    ngx_req.read_body()
+    local data = ngx_req.get_body_data()
+    if data then
+  --    memc_store(ctx, key, data, tonumber(ngx_var.memc_ttl))
+      ngx.timer.at(0, delayed_memc_store, ctx, key, data, tonumber(ngx_var.memc_ttl))
+      return
+    end
+  else
+    return exit(ngx.HTTP_NOT_ALLOWED)
+  end
+}

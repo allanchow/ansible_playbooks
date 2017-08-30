@@ -96,33 +96,8 @@ http {
         store_ttl = 1800,  -- in seconds, optional, default to 0 (i.e., never expires)
     }
 
-    function srmem_get(key)
-      local ctx = ngx.ctx
-      local value, err = memc_fetch(ctx, key)
-      if err then
-        ngx_log(ngx.ERR, "failed to get: ", err)
-        return ngx.HTTP_SERVICE_UNAVAILABLE
-      end
-      if not value then
-        return ngx.HTTP_NOT_FOUND
-      end
--- ngx_log(ngx.ERR, 'found')
-      ngx.print(value)
-      return ngx.HTTP_OK
-    end
-
-    function srmem_set(key, ngx_req, exp)
-      local ctx = ngx.ctx
-      ngx_req.read_body()
-      local data = ngx_req.get_body_data()
-      if data then
-        local ok = memc_store(ctx, key, data, exp)
--- ngx_log(ngx.ERR, 'set')
-        if not ok then
-          ngx_log(ngx.ERR, "failed to set: ", err)
-          return
-        end
-      end
+    function delayed_memc_store(premature, ...)
+      memc_store(...)
     end
 
 --    es_access_logger_udp = require "resty.logger.socket_mod"
@@ -339,15 +314,6 @@ http {
   #   location / { dyups_interface; }
   # }
 
-  upstream memc_cluster {
-    {% if memcached.connection == "tcp" %}
-    server {{ memcached.tcp.cluster_ip }}:{{ memcached.tcp.cluster_port }} fail_timeout=2s;
-    {% else %}
-    server unix:{{ memcached.unix.socket }};
-    {% endif %}
-    keepalive 16;
-#    consistent_hash $key;
-  }
 
   include {{ nginx.conf_root }}/conf.d/no-default;
   include {{ nginx.resource_root }}/*.conf;

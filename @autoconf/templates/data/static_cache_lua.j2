@@ -1,21 +1,8 @@
 
   location = /memc {
     internal;
-    client_max_body_size    {{ memcached.max_slab_page }};
-    client_body_buffer_size {{ memcached.max_slab_page }};
-    content_by_lua_block {
-      local ngx_req = ngx.req
-      local key = ngx.var.query_string
-      local method = ngx_req.get_method()
-      if method == 'GET' then
-        local ret = srmem_get(key)
-        ngx.exit(ret)
-      elseif method == 'PUT' then
-        srmem_set(key, ngx_req, {{ cache_exp_sec}})
-      else
-        ngx.exit(ngx.HTTP_NOT_ALLOWED)
-      end
-    }
+    set_by_lua_block $memc_ttl { return {{ cache_exp_sec}} }
+    include conf.d/lua_memc.conf;
   }
   location ~* \.(?:{{ file_type | join("|") }})$ {
     # srcache-nginx-module

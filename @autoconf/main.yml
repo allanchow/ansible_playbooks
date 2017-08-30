@@ -192,13 +192,17 @@
       register: nginx_bin
       failed_when: nginx_bin.stat.exists == False or nginx_bin.stat.executable|default(False) == False
 
-    - name: Conf Staging | Preparation
+    - name: Conf Staging | Dir Preparation
       file: path="{{ item }}" state=directory mode=0777
       with_items:
         - "{{ root }}/logs"
         - "{{ nginx.resource_root }}"
         - "{{ nginx.customers_root }}"
         - "{{ nginx.cert_root }}"
+
+    - name: Conf Staging | File Preparation
+      shell: cp -pvar conf/* {{ nginx_root }}/conf/
+      changed_when: False
 
     - include: inc.conf.yml
       vars:
