@@ -1,8 +1,13 @@
 #jinja2: lstrip_blocks: "True", trim_blocks: "True"
 -- {{ ansible_managed }}
 
+local resty_ngx_re  = require "ngx.re"
+local mp            = require "MessagePack"
+local zlib          = require "zlib"
+
 local next          = next
 local split         = resty_ngx_re.split
+local match         = ngx.re.match
 local var           = ngx.var
 local upstream_addr = var.upstream_addr
 local insert        = table.insert
@@ -13,7 +18,7 @@ local zlibc         = zlib.deflate()
 local https          = (var.https ~= nil and var.https ~= '') and true or false
 local raw_uri        = var.request_uri
 local file_ext_regex = [[/[^\?#]*\.(?<ext>[^\?#/\.]+)(?:$|[\?#])]]
-local m              = ngx.re.match(raw_uri, file_ext_regex, "aisjo")
+local m              = match(raw_uri, file_ext_regex, "aisjou")
 local file_ext       = m and m['ext'] or ''
 
 -- local server_log_json = {

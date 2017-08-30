@@ -42,15 +42,18 @@ http {
 
     math.randomseed()
 
-    function dlog(ctx, ...)
+    local ngx_log = ngx.log
+    local len = string.len
+
+    local function dlog(ctx, ...)
       ngx_log(ngx.DEBUG, ...)
     end
 
-    function error_log(ctx, ...)
+    local function error_log(ctx, ...)
       ngx_log(ngx.ERR, ...)
     end
 
-    function warn(ctx, ...)
+    local function warn(ctx, ...)
       ngx_log(ngx.WARN, ...)
     end
 
@@ -62,8 +65,8 @@ http {
         negative_ttl = 10000,
     }
 
-    local memc_fetch, memc_store = (require "resty.memcached.shdict_mod").gen_memc_methods{
-        tag = "static caching",
+    memc_fetch, memc_store = (require "resty.memcached.shdict_mod").gen_memc_methods{
+        tag = "memc_static_cache",
         debug_logger = dlog,
         warn_logger = warn,
         error_logger = error_log,
@@ -149,7 +152,6 @@ http {
     end
     {% endif %}
 
-    local len = string.len
     function es_log(msg, bytes)
       local out_bytes = bytes or len(msg)
       local logger = es_access_logger_udp
