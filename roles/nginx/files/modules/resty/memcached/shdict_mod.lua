@@ -156,8 +156,8 @@ function _M.gen_memc_methods (opts)
                 end
 
             else
-                error_log(ctx, 'failed to acquire cache lock on key "', key,
-                             '"; proceed anyway')
+                error_log(ctx, 'memc fetch: failed to acquire cache lock on key "', key,
+                             '"; proceed anyway, error: ', err)
             end
         end
 
@@ -251,8 +251,8 @@ function _M.gen_memc_methods (opts)
             if elapsed then
                 -- lock is acquired
             else
-                error_log(ctx, 'failed to acquire cache lock on key "', key,
-                             '"; proceed anyway')
+                error_log(ctx, 'memc store: failed to acquire cache lock on key "', key,
+                             '"; proceed anyway, err: ', err)
                 return nil
             end
         end
