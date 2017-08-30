@@ -1,4 +1,6 @@
 ---
+nginx_config_only: False
+
 ngx_binary: nginx.1.12.1
 
 modules:

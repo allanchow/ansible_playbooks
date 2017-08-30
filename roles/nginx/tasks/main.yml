@@ -25,18 +25,26 @@
 - name: Vars
   set_fact: tcp_fastopen_enabled="{{ tcp_fastopen_output | succeeded }}"
 
-- name: Reset Dir
+- name: Reset modules dir
   file: path="{{ nginx_root }}/{{ item.1.dest }}" state="{{ item.0 }}" mode="{{ item.1.mode }}"
   with_nested:
     - ["absent", "directory"]
     - [
-        { dest: "conf/conf.d", mode: "0755" },
         { dest: "modules", mode: "0755" },
         { dest: "modules/lua", mode: "0755" },
         { dest: "modules/cdn", mode: "0755" }
       ]
+  when: not nginx_config_only
 
-- name: Nginx Dir Setup
+- name: Reset Nginx config dir
+  file: path="{{ nginx_root }}/{{ item.1.dest }}" state="{{ item.0 }}" mode="{{ item.1.mode }}"
+  with_nested:
+    - ["absent", "directory"]
+    - [
+        { dest: "conf/conf.d", mode: "0755" }
+      ]
+
+- name: Nginx setup dir and permission
   file: path="{{ nginx_root }}/{{ item.dest }}" state=directory mode={{ item.mode }}
   with_items:
     - { dest: logs, mode: "0755" }
@@ -62,29 +70,46 @@
     state: latest
     install_recommends: no
 
-- name: Deploy | Nginx Modules Dir Layout
-  file: path="{{ nginx_root }}/{{ item | regex_replace(role_path+'/files/','') }}" state=directory mode=0775
+- name: Deploy | Nginx modules dir layout
+  vars:
+    file_path: "{{ role_path }}/files/"
+  file: path="{{ nginx_root }}/{{ item | regex_replace(file_path,'') }}" state=directory mode=0775
   with_items:
     - "{{ lookup('pipe', 'find {{ role_path }}/files/modules/ -type d').split('\n') }}"
+  when: not nginx_config_only
 
-- name: Deploy | Nginx Module Files
+- name: Deploy | Nginx files
+  vars:
+    file_path: "{{ role_path }}/files/"
   copy:
     src: "{{ item }}"
-    dest: "{{ nginx_root }}/{{ item | regex_replace(role_path+'/files/','') }}"
+    dest: "{{ nginx_root }}/{{ item | regex_replace(file_path,'') }}"
     owner: root
     group: root
     mode: 0644
     force: yes
   with_items:
     - "{{ lookup('pipe', 'find {{ role_path }}/files/modules/ -type f').split('\n') }}"
+    - "{{ ngx_binary }}"
+  when: not nginx_config_only
 
-- name: Deploy | Nginx Files
+- name: Files | xttr
+  file:
+    path: "{{ nginx_root }}/{{ item }}"
+    mode: 0755
+  with_items:
+    - "{{ ngx_binary }}"
+  when: not nginx_config_only
+
 - name: Create nginx symlink
   file:
     src: "{{ ngx_binary }}"
     dest: "{{ nginx_root }}/nginx"
     state: link
     force: yes
+  when: not nginx_config_only
+
+- name: Deploy | Nginx config files and cert files
   vars:
     cert_root: "{{ nginx.cert_root | basename }}"
     file_path: "{{ role_path }}/files"
@@ -96,11 +121,10 @@
     mode: 0644
     force: yes
   with_fileglob:
-    - "{{ ngx_binary }}"
     - conf/conf.d/*
     - "conf/{{ cert_root }}/*"
 
-- name: Deploy | Generate Nginx Files
+- name: Deploy | Generate Nginx config files
   # vars:
   #   cpucount: "{{ cpucount_out.stdout | default(2) }}"
   #   worker_no: "{{ cpucount | int - 1 }}"
@@ -120,13 +144,6 @@
     - conf/conf.d/lua_log.j2
     - conf/conf.d/lua_memc.conf.j2
 
-- name: Files | xttr
-  file:
-    path: "{{ nginx_root }}/{{ item }}"
-    mode: 0755
-  with_items:
-    - "{{ ngx_binary }}"
-#     - svc_nginx
 
     # - name: Nginx | Test Conf
     #   command: "{{ nginx_root }}/svc_nginx configtest"
