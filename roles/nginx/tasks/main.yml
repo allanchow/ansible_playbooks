@@ -79,6 +79,12 @@
     - "{{ lookup('pipe', 'find {{ role_path }}/files/modules/ -type f').split('\n') }}"
 
 - name: Deploy | Nginx Files
+- name: Create nginx symlink
+  file:
+    src: "{{ ngx_binary }}"
+    dest: "{{ nginx_root }}/nginx"
+    state: link
+    force: yes
   vars:
     cert_root: "{{ nginx.cert_root | basename }}"
     file_path: "{{ role_path }}/files"
@@ -132,9 +138,6 @@
 #   args:
 #     chdir: "{{ nginx_root }}"
 #     executable: /bin/bash
-
-- shell: "mv {{ nginx_root }}/{{ ngx_binary }} {{ nginx_root }}/nginx"
-
 
 - name: Generate nginx.service
   template:
