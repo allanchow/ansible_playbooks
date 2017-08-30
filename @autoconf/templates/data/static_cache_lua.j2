@@ -5,6 +5,8 @@
     include conf.d/lua_memc.conf;
   }
   location ~* \.(?:{{ file_type | join("|") }})$ {
+    client_max_body_size            {{ memcached.max_slab_page }};
+    # client_body_buffer_size       {{ memcached.max_slab_page }};
     # srcache-nginx-module
     #set_escape_uri   $escaped_request_uri "ngx_{{ host_header }}$request_uri$args$http_range";
     #set              $key $escaped_request_uri;
