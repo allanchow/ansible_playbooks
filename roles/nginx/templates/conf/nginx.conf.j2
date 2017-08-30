@@ -327,7 +327,7 @@ http {
     default "";
   }
 
-  error_page     400 =444;
+#  error_page     400 =444;
 
   access_log off;
   error_log syslog:server={{ cdn.logstash.error_log.udp.host }}:{{ cdn.logstash.error_log.udp.port }} warn;
