@@ -36,7 +36,7 @@ http {
 
   lua_shared_dict ip_limit_pool    100m;
   lua_shared_dict memc_cache       {{ memcached.max_slab_page }};
-  lua_shared_dict memc_cache_lock   10m;
+  lua_shared_dict memc_cache_lock  100k;
 
   init_worker_by_lua_block {
 
@@ -87,7 +87,7 @@ http {
         memc_host = "unix:{{ memcached.unix.socket }}",
         {% endif %}
         memc_timeout = 200,  -- in ms
-        memc_conn_pool_size = 5,
+        memc_conn_pool_size = {{ memcached.reqs_per_event }},
         memc_fetch_retries = 2,  -- optional, default 1
         memc_fetch_retry_delay = 100, -- in ms, optional, default to 100 (ms)
 
