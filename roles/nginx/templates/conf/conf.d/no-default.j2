@@ -23,6 +23,31 @@ server {
     allow 127.0.0.1;
     deny all;
   }
+  location = /memc_status {
+    default_type 'text/plain';
+    gzip on;
+    access_log off;
+    {% for ip in ipv4.hko_gw + ipv4.hk_eqx01 + ipv4.hk_eqx01_mgmt + ipv4.hk_eqx01_service %}
+    allow {{ ip | resolve }};
+    {% endfor %}
+    allow 127.0.0.1;
+    deny all;
+    content_by_lua_block {
+      local memcached = require "resty.memcached"
+      local memc = memcached:new()
+      if not memc then
+        return
+      end
+      {% if memcached.connection == "tcp" %}
+      memc:connect("{{ memcached.tcp.cluster_ip }}", {{ memcached.tcp.cluster_port }})
+      {% else %}
+      memc:connect("unix:{{ memcached.unix.socket }}")
+      {% endif %}
+      local lines, err = memc:stats(ngx.var.query_string)
+      local out = table.concat(lines, '\n')
+      ngx.say(out)
+    }
+  }
   location / { return 444; }
 }
 server {
