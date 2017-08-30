@@ -220,7 +220,7 @@
 #        domain_hack: item.origin is defined and item.origin | length == 1 and item.origin | default([]) | first | selectattr('ip', 'ipaddr') | length == 0
         static_caching_enabled: "{{ item.file_type is defined and item.file_type | length > 0 | bool }}"
         file_type: "{{ item.file_type | default(omit) }}"
-        cache_exp_sec: "{{ item.max_age | default(1800, True) | int }}"
+        cache_exp_sec: "{{ item.max_age | default(memcached.default_ttl, True) | int }}"
         ssl_enabled: "{{ item.ssl_cert is defined | bool and item.ssl_key is defined | bool }}"
         http_ver: "{{ item.http | default(1, True) | int }}"
       with_flattened:

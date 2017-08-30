@@ -80,6 +80,7 @@ heartbeat:
 memcached:
   user: memcached
 #  path: "{{ base_root }}/memcached"
+  default_ttl: 1800
   max_slab_page: 100m
   maxconn: 102400
   backlog_queue_limit: 4096
