@@ -20,6 +20,7 @@ local raw_uri        = var.request_uri
 local file_ext_regex = [[/[^\?#]*\.(?<ext>[^\?#/\.]+)(?:$|[\?#])]]
 local m              = match(raw_uri, file_ext_regex, "aisjou")
 local file_ext       = m and m['ext'] or ''
+local resource_id    = var._resource_id or nil
 
 -- local server_log_json = {
 --   program          = 'nginx',
@@ -45,7 +46,7 @@ local log_json = {
   -- request_time_ms
   d    = math.floor(tonumber(var.request_time) * 1000),
   -- resource_id
-  e        = __to_n(var._resource_id),
+  e        = __to_n(resource_id),
   -- https
   f              = https,
   -- http2
