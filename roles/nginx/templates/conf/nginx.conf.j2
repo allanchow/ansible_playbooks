@@ -10,6 +10,7 @@ worker_shutdown_timeout          1m;
 # Each connection needs a filehandle (or 2 if you are proxying)
 worker_rlimit_nofile         393216;
 worker_priority                  -2;
+user                         {{ nginx.user }} {{ nginx.user }};
 
 events {
   worker_connections         102400;
