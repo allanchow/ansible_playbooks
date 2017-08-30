@@ -51,6 +51,9 @@
     # the value >= the number of upstream target / proxy_connect_timeout
     proxy_next_upstream_timeout       60s;
 
+    # close the proxy backend connection if client closes the connection
+    proxy_ignore_client_abort          on;
+
     proxy_connect_timeout              5s;
     proxy_send_timeout                 5m;
     proxy_read_timeout                 5m;
