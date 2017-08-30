@@ -1,0 +1,2 @@
+# allow ntpd to correct system time when it is more than 1000s out-of-sync
+NTPD_OPTS='-g'

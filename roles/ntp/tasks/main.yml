@@ -11,7 +11,7 @@
 - name: Ensure NTP is running and enabled as configured.
   service:
     name: "{{ ntp_daemon }}"
-    state: started
+    state: restarted
     enabled: yes
   when: ntp_enabled
 
@@ -21,6 +21,16 @@
     state: stopped
     enabled: no
   when: not ntp_enabled
+
+- name: Correct system date if more than 1000s out-of-sync
+  copy:
+    src: ntp
+    dest: /etc/default/ntp
+    owner: root
+    group: root
+    mode: 0644
+    force: yes
+  when: ntp_enabled
 
 - name: Generate ntp.conf file
   template:
@@ -33,3 +43,4 @@
   when: ntp_manage_config
 
 - meta: flush_handlers
+  when: ntp_enabled
