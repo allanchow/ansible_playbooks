@@ -16,6 +16,7 @@
       tags: always
 
   roles:
+    - { role: +facts,         tags: always }
     - { role: locales,        when: True, tags: [sys, cdn, locales] }
     - { role: ntp,            when: True, tags: [sys, cdn, ntp] }
     - { role: cron,           when: True, tags: [sys, cdn, cron] }
