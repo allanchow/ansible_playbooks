@@ -169,17 +169,22 @@ http {
       local limitreq = require "resty.limit.req"
       local exit = ngx.exit
       local sleep = ngx.sleep
+      local remote_addr = ngx.var.remote_addr
       local lim, err = limitreq.new(shm, rps, burst)
       if not lim then log(ngx.ERR, "failed to instantiate a resty.limit.req object: ", err); return end
-      local delay, err = lim:incoming(key, true)
-      if not delay then
-        if err == "rejected" then return exit(ngx.HTTP_TOO_MANY_REQUESTS) end
+      local delay_sec, err = lim:incoming(key, true)
+      if not delay_sec then
+        if err == "rejected" then
+          ngx_log(ngx.CRIT, remote_addr," reaches global rps limit > ", rps+burst)
+          return exit(ngx.HTTP_TOO_MANY_REQUESTS)
+        end
         ngx_log(ngx.ERR, "failed to limit req:", err)
         return
       end
-      if delay > 0 then
+      if delay_sec > 0 then
 --        local excess = err
-        sleep(extra_delay_on_overburst+delay)
+        ngx_log(ngx.WARN, remote_addr," reaches global rps limit > ", rps, " and < ", rps+burst, ", excess rps: ", err, ", delay: ", delay_sec, "s")
+--        sleep(extra_delay_on_overburst+delay_sec)
       end
     end
   }
@@ -310,13 +315,7 @@ http {
   error_page     400 =444;
 
   access_log off;
-  error_log syslog:server={{ cdn.logstash.error_log.udp.host }}:{{ cdn.logstash.error_log.udp.port }} error;
-
-  # server {
-  #   listen 8081;
-  #   location / { dyups_interface; }
-  # }
-
+  error_log syslog:server={{ cdn.logstash.error_log.udp.host }}:{{ cdn.logstash.error_log.udp.port }} warn;
 
   include {{ nginx.conf_root }}/conf.d/no-default;
   include {{ nginx.resource_root }}/*.conf;
