@@ -30,7 +30,7 @@ ExecStartPre=/bin/bash -c "/bin/systemctl set-environment NGX_WORKER_AFFINITY=$(
 ExecStartPre={{ base_root }}/nginx/nginx -t
 ExecStartPre=/bin/bash -c "sysctl -w net.ipv4.tcp_rmem='4096 4194304 16777216'"
 ExecStartPre=/bin/bash -c "sysctl -w net.ipv4.tcp_wmem='4096 4194304 16777216'"
-ExecStart={{ base_root }}/nginx/nginx -g "pid /var/run/nginx.pid; daemon on; master_process on; worker_processes ${NGX_WORKERS}; worker_cpu_affinity auto ${NGX_WORKER_AFFINITY}; user {{ nginx.user }} {{ nginx.user }}; thread_pool default threads=${NGX_THREAD_POOL} max_queue=65535;"
+ExecStart={{ base_root }}/nginx/nginx -g "pid /var/run/nginx.pid; daemon on; master_process on; worker_processes ${NGX_WORKERS}; worker_cpu_affinity auto ${NGX_WORKER_AFFINITY}; thread_pool default threads=${NGX_THREAD_POOL} max_queue=65535;"
 ExecReload=/bin/kill -s HUP $MAINPID
 ExecStop=/sbin/start-stop-daemon --quiet --stop --retry QUIT/5 --pidfile /var/run/nginx.pid
 TimeoutStopSec=5
