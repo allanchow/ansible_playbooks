@@ -112,6 +112,7 @@
     - conf/conf.d/lua_header.j2
     - conf/conf.d/lua_init.j2
     - conf/conf.d/lua_log.j2
+    - conf/conf.d/lua_memc.conf.j2
 
 - name: Files | xttr
   file:
