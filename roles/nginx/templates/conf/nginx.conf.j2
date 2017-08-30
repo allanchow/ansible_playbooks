@@ -14,7 +14,7 @@ user                         {{ nginx.user }} {{ nginx.user }};
 
 events {
   worker_connections         102400;
-  worker_aio_requests           256;
+  worker_aio_requests          1024;
   use                         epoll;
   multi_accept                   on;
   accept_mutex                  off;
@@ -25,8 +25,11 @@ http {
   lua_code_cache               on;
   lua_package_path             "{{ nginx_root }}/modules/?.lua;;";
   lua_package_cpath            "{{ nginx_root }}/modules/lua/?.so;;";
-  lua_socket_pool_size         30;
-  lua_max_running_timers       4096;
+
+  lua_check_client_abort          on;
+
+  lua_ssl_protocols            TLSv1 TLSv1.1 TLSv1.2;
+  lua_max_running_timers        4096;
   lua_max_pending_timers       16384;
   #lua_socket_log_errors       off;
 
@@ -267,7 +270,7 @@ http {
 # than close the connections
   send_minimum_rate            10k;  # Bps
 
-#  sendfile_max_chunk          512k;
+  sendfile_max_chunk          512k;
 
 # set RST abrutly
   reset_timedout_connection     on;
@@ -278,7 +281,7 @@ http {
 
   tcp_nodelay                   on;
   keepalive_timeout         10s 5s;
-  keepalive_requests           512;
+  keepalive_requests          1024;
 
   postpone_output             1400;  # postpone output unti a MTU is filled up
 
